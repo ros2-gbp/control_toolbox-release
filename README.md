@@ -1,3 +1,24 @@
+## control_toolbox (jade) - 1.13.1-0
+
+The packages in the `control_toolbox` repository were released into the `jade` distro by running `/usr/bin/bloom-release control_toolbox --track jade --rosdistro jade --edit` on `Thu, 30 Apr 2015 11:47:52 -0000`
+
+The `control_toolbox` package was released.
+
+Version of package(s) in repository `control_toolbox`:
+- upstream repository: https://github.com/ros-controls/control_toolbox.git
+- release repository: unknown
+- rosdistro version: `null`
+- old version: `null`
+- new version: `1.13.1-0`
+
+Versions of tools used:
+- bloom version: `0.5.19`
+- catkin_pkg version: `0.2.8`
+- rosdep version: `0.11.0`
+- rosdistro version: `0.4.0`
+- vcstools version: `0.1.33`
+
+
 ## control_toolbox (indigo) - 1.13.1-0
 
 The packages in the `control_toolbox` repository were released into the `indigo` distro by running `/usr/bin/bloom-release control_toolbox --track indigo --rosdistro indigo` on `Thu, 30 Apr 2015 08:58:27 -0000`
