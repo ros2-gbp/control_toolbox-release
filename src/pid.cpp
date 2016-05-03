@@ -41,14 +41,16 @@
 #include <control_toolbox/pid.h>
 #include <tinyxml.h>
 
+#include <boost/algorithm/clamp.hpp>
+
 namespace control_toolbox {
 
 static const std::string DEFAULT_NAMESPACE = "pid"; // \todo better default prefix?
 
-Pid::Pid(double p, double i, double d, double i_max, double i_min)
+Pid::Pid(double p, double i, double d, double i_max, double i_min, bool antiwindup)
   : dynamic_reconfig_initialized_(false)
 {
-  setGains(p,i,d,i_max,i_min);
+  setGains(p,i,d,i_max,i_min,antiwindup);
 
   reset();
 }
@@ -67,19 +69,19 @@ Pid::~Pid()
 {
 }
 
-void Pid::initPid(double p, double i, double d, double i_max, double i_min, 
-  const ros::NodeHandle &node)
+void Pid::initPid(double p, double i, double d, double i_max, double i_min, bool antiwindup,
+  const ros::NodeHandle& /*node*/)
 {
-  initPid(p, i, d, i_max, i_min);
+  initPid(p, i, d, i_max, i_min, antiwindup);
 
   // Create node handle for dynamic reconfigure
   ros::NodeHandle nh(DEFAULT_NAMESPACE);
   initDynamicReconfig(nh);
 }
 
-void Pid::initPid(double p, double i, double d, double i_max, double i_min)
+void Pid::initPid(double p, double i, double d, double i_max, double i_min, bool antiwindup)
 {
-  setGains(p,i,d,i_max,i_min);
+  setGains(p,i,d,i_max,i_min, antiwindup);
 
   reset();
 }
@@ -97,7 +99,7 @@ bool Pid::init(const ros::NodeHandle &node, const bool quiet)
   Gains gains;
 
   // Load PID gains from parameter server
-  if (!nh.getParam("p", gains.p_gain_)) 
+  if (!nh.getParam("p", gains.p_gain_))
   {
     if (!quiet) {
       ROS_ERROR("No p gain specified for pid.  Namespace: %s", nh.getNamespace().c_str());
@@ -123,7 +125,16 @@ bool Pid::init(const ros::NodeHandle &node, const bool quiet)
     nh.param("i_clamp_max", gains.i_max_, gains.i_max_); // use i_clamp_max parameter, otherwise keep i_clamp
     gains.i_max_ = std::abs(gains.i_max_); // make sure the value is >= 0
   }
-  
+  nh.param("antiwindup", gains.antiwindup_, false);
+
+  nh.param("publish_state", publish_state_, false);
+
+  if(publish_state_)
+  {
+    state_publisher_.reset(new realtime_tools::RealtimePublisher<control_msgs::PidState>());
+    state_publisher_->init(nh, "state", 1);
+  }
+
   setGains(gains);
 
   reset();
@@ -140,12 +151,13 @@ bool Pid::initXml(TiXmlElement *config)
   double i_clamp;
   i_clamp = config->Attribute("iClamp") ? atof(config->Attribute("iClamp")) : 0.0;
 
-  setGains( 
+  setGains(
     config->Attribute("p") ? atof(config->Attribute("p")) : 0.0,
     config->Attribute("i") ? atof(config->Attribute("i")) : 0.0,
     config->Attribute("d") ? atof(config->Attribute("d")) : 0.0,
     std::abs(i_clamp),
-    -std::abs(i_clamp)
+    -std::abs(i_clamp),
+    config->Attribute("antiwindup") ? atof(config->Attribute("antiwindup")) : false
   );
 
   reset();
@@ -156,19 +168,19 @@ bool Pid::initXml(TiXmlElement *config)
 
 void Pid::initDynamicReconfig(ros::NodeHandle &node)
 {
-  ROS_DEBUG_STREAM_NAMED("pid","Initializing dynamic reconfigure in namespace " 
+  ROS_DEBUG_STREAM_NAMED("pid","Initializing dynamic reconfigure in namespace "
     << node.getNamespace());
 
   // Start dynamic reconfigure server
   param_reconfig_server_.reset(new DynamicReconfigServer(param_reconfig_mutex_, node));
   dynamic_reconfig_initialized_ = true;
- 
+
   // Set Dynamic Reconfigure's gains to Pid's values
   updateDynamicReconfig();
 
   // Set callback
   param_reconfig_callback_ = boost::bind(&Pid::dynamicReconfigCallback, this, _1, _2);
-  param_reconfig_server_->setCallback(param_reconfig_callback_); 
+  param_reconfig_server_->setCallback(param_reconfig_callback_);
 }
 
 void Pid::reset()
@@ -180,7 +192,7 @@ void Pid::reset()
   cmd_ = 0.0;
 }
 
-void Pid::getGains(double &p, double &i, double &d, double &i_max, double &i_min)
+void Pid::getGains(double &p, double &i, double &d, double &i_max, double &i_min, bool &antiwindup)
 {
   Gains gains = *gains_buffer_.readFromRT();
 
@@ -189,17 +201,18 @@ void Pid::getGains(double &p, double &i, double &d, double &i_max, double &i_min
   d     = gains.d_gain_;
   i_max = gains.i_max_;
   i_min = gains.i_min_;
+  antiwindup = gains.antiwindup_;
 }
 
-Pid::Gains Pid::getGains() 
+Pid::Gains Pid::getGains()
 {
   return *gains_buffer_.readFromRT();
 }
 
-void Pid::setGains(double p, double i, double d, double i_max, double i_min)
+void Pid::setGains(double p, double i, double d, double i_max, double i_min, bool antiwindup)
 {
-  Gains gains(p,i,d,i_max,i_min);
-  
+  Gains gains(p,i,d,i_max,i_min, antiwindup);
+
   setGains(gains);
 }
 
@@ -217,11 +230,11 @@ void Pid::updateDynamicReconfig()
   if(!dynamic_reconfig_initialized_)
     return;
 
-  // Get starting values 
+  // Get starting values
   control_toolbox::ParametersConfig config;
 
-  // Get starting values   
-  getGains(config.p, config.i, config.d, config.i_clamp_max, config.i_clamp_min);
+  // Get starting values
+  getGains(config.p, config.i, config.d, config.i_clamp_max, config.i_clamp_min, config.antiwindup);
 
   updateDynamicReconfig(config);
 }
@@ -240,6 +253,7 @@ void Pid::updateDynamicReconfig(Gains gains_config)
   config.d = gains_config.d_gain_;
   config.i_clamp_max = gains_config.i_max_;
   config.i_clamp_min = gains_config.i_min_;
+  config.antiwindup = gains_config.antiwindup_;
 
   updateDynamicReconfig(config);
 }
@@ -251,93 +265,40 @@ void Pid::updateDynamicReconfig(control_toolbox::ParametersConfig config)
     return;
 
   // Set starting values, using a shared mutex with dynamic reconfig
-  param_reconfig_mutex_.lock(); 
+  param_reconfig_mutex_.lock();
   param_reconfig_server_->updateConfig(config);
-  param_reconfig_mutex_.unlock(); 
+  param_reconfig_mutex_.unlock();
 }
 
-void Pid::dynamicReconfigCallback(control_toolbox::ParametersConfig &config, uint32_t level)
+void Pid::dynamicReconfigCallback(control_toolbox::ParametersConfig &config, uint32_t /*level*/)
 {
   ROS_DEBUG_STREAM_NAMED("pid","Dynamics reconfigure callback recieved.");
 
   // Set the gains
-  setGains(config.p, config.i, config.d, config.i_clamp_max, config.i_clamp_min);
+  setGains(config.p, config.i, config.d, config.i_clamp_max, config.i_clamp_min, config.antiwindup);
 }
 
 double Pid::computeCommand(double error, ros::Duration dt)
 {
-  // Get the gain parameters from the realtime buffer
-  Gains gains = *gains_buffer_.readFromRT();
-
-  double p_term, d_term, i_term;
-  p_error_ = error; // this is error = target - state
 
   if (dt == ros::Duration(0.0) || std::isnan(error) || std::isinf(error))
     return 0.0;
 
-  // Calculate proportional contribution to command
-  p_term = gains.p_gain_ * p_error_;
-
-  // Calculate the integral of the position error
-  i_error_ += dt.toSec() * p_error_;
-  
-  // Calculate integral contribution to command
-  i_term = gains.i_gain_ * i_error_;
-
-  // Limit i_term so that the limit is meaningful in the output
-  i_term = std::max( gains.i_min_, std::min( i_term, gains.i_max_) );
+  double error_dot = d_error_;
 
   // Calculate the derivative error
   if (dt.toSec() > 0.0)
   {
-    d_error_ = (p_error_ - p_error_last_) / dt.toSec();
-    p_error_last_ = p_error_;
+    error_dot = (error - p_error_last_) / dt.toSec();
+    p_error_last_ = error;
   }
-  // Calculate derivative contribution to command
-  d_term = gains.d_gain_ * d_error_;
 
-  // Compute the command
-  cmd_ = p_term + i_term + d_term;
-
-  return cmd_;
+  return computeCommand(error, error_dot, dt);
 }
 
 double Pid::updatePid(double error, ros::Duration dt)
 {
-  // Get the gain parameters from the realtime buffer
-  Gains gains = *gains_buffer_.readFromRT();
-
-  double p_term, d_term, i_term;
-  p_error_ = error; //this is pError = pState-pTarget
-
-  if (dt == ros::Duration(0.0) || std::isnan(error) || std::isinf(error))
-    return 0.0;
-
-  // Calculate proportional contribution to command
-  p_term = gains.p_gain_ * p_error_;
-
-  // Calculate the integral of the position error
-  i_error_ += dt.toSec() * p_error_;
-  
-  // Calculate integral contribution to command
-  i_term = gains.i_gain_ * i_error_;
-
-  // Limit i_term so that the limit is meaningful in the output
-  i_term = std::max( gains.i_min_, std::min( i_term, gains.i_max_) );
-
-  // Calculate the derivative error
-  if (dt.toSec() > 0.0)
-  {
-    d_error_ = (p_error_ - p_error_last_) / dt.toSec();
-    p_error_last_ = p_error_;
-  }
-  // Calculate derivative contribution to command
-  d_term = gains.d_gain_ * d_error_;
-
-  // Compute the command
-  cmd_ = - p_term - i_term - d_term;
-
-  return cmd_;
+  return -computeCommand(error, dt);
 }
 
 double Pid::computeCommand(double error, double error_dot, ros::Duration dt)
@@ -352,18 +313,28 @@ double Pid::computeCommand(double error, double error_dot, ros::Duration dt)
   if (dt == ros::Duration(0.0) || std::isnan(error) || std::isinf(error) || std::isnan(error_dot) || std::isinf(error_dot))
     return 0.0;
 
-
   // Calculate proportional contribution to command
   p_term = gains.p_gain_ * p_error_;
 
   // Calculate the integral of the position error
   i_error_ += dt.toSec() * p_error_;
-  
+
+  if(gains.antiwindup_)
+  {
+    // Prevent i_error_ from climbing higher than permitted by i_max_/i_min_
+    i_error_ = boost::algorithm::clamp(i_error_,
+                                       gains.i_min_ / std::abs(gains.i_gain_),
+                                       gains.i_max_ / std::abs(gains.i_gain_));
+  }
+
   // Calculate integral contribution to command
   i_term = gains.i_gain_ * i_error_;
 
-  // Limit i_term so that the limit is meaningful in the output
-  i_term = std::max( gains.i_min_, std::min( i_term, gains.i_max_) );
+  if(!gains.antiwindup_)
+  {
+    // Limit i_term so that the limit is meaningful in the output
+    i_term = boost::algorithm::clamp(i_term, gains.i_min_, gains.i_max_);
+  }
 
   // Calculate derivative contribution to command
   d_term = gains.d_gain_ * d_error_;
@@ -371,41 +342,34 @@ double Pid::computeCommand(double error, double error_dot, ros::Duration dt)
   // Compute the command
   cmd_ = p_term + i_term + d_term;
 
+  // Publish controller state if configured
+  if (publish_state_ && state_publisher_)
+  {
+    if (state_publisher_->trylock())
+    {
+      state_publisher_->msg_.header.stamp = ros::Time::now();
+      state_publisher_->msg_.timestep = dt;
+      state_publisher_->msg_.error = error;
+      state_publisher_->msg_.error_dot = error_dot;
+      state_publisher_->msg_.p_error = p_error_;
+      state_publisher_->msg_.i_error = i_error_;
+      state_publisher_->msg_.d_error = d_error_;
+      state_publisher_->msg_.p_term = p_term;
+      state_publisher_->msg_.i_term = i_term;
+      state_publisher_->msg_.d_term = d_term;
+      state_publisher_->msg_.i_max = gains.i_max_;
+      state_publisher_->msg_.i_min = gains.i_min_;
+      state_publisher_->msg_.output = cmd_;
+      state_publisher_->unlockAndPublish();
+    }
+  }
+
   return cmd_;
 }
 
 double Pid::updatePid(double error, double error_dot, ros::Duration dt)
 {
-  // Get the gain parameters from the realtime buffer
-  Gains gains = *gains_buffer_.readFromRT();
-
-  double p_term, d_term, i_term;
-  p_error_ = error; //this is pError = pState-pTarget
-  d_error_ = error_dot;
-
-  if (dt == ros::Duration(0.0) || std::isnan(error) || std::isinf(error) || std::isnan(error_dot) || std::isinf(error_dot))
-    return 0.0;
-
-
-  // Calculate proportional contribution to command
-  p_term = gains.p_gain_ * p_error_;
-
-  // Calculate the integral of the position error
-  i_error_ += dt.toSec() * p_error_;
-  
-  // Calculate integral contribution to command
-  i_term = gains.i_gain_ * i_error_;
-
-  // Limit i_term so that the limit is meaningful in the output
-  i_term = std::max( gains.i_min_, std::min( i_term, gains.i_max_) );
-
-  // Calculate derivative contribution to command
-  d_term = gains.d_gain_ * d_error_;
-
-  // Compute the command
-  cmd_ = - p_term - i_term - d_term;
-
-  return cmd_;
+  return -computeCommand(error, error_dot, dt);
 }
 
 void Pid::setCurrentCmd(double cmd)
@@ -438,6 +402,7 @@ void Pid::printValues()
     << "  D Gain: " << gains.d_gain_ << "\n"
     << "  I_Max:  " << gains.i_max_  << "\n"
     << "  I_Min:  " << gains.i_min_  << "\n"
+    << "  Antiwindup:  " << gains.antiwindup_  << "\n"
     << "  P_Error_Last: " << p_error_last_  << "\n"
     << "  P_Error:      " << p_error_  << "\n"
     << "  I_Error:       " << i_error_  << "\n"
