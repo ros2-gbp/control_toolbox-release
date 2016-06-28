@@ -1,3 +1,26 @@
+## control_toolbox (kinetic) - 1.15.0-0
+
+The packages in the `control_toolbox` repository were released into the `kinetic` distro by running `/usr/bin/bloom-release --rosdistro kinetic --track kinetic control_toolbox` on `Tue, 28 Jun 2016 16:46:54 -0000`
+
+The `control_toolbox` package was released.
+
+Version of package(s) in repository `control_toolbox`:
+
+- upstream repository: https://github.com/ros-controls/control_toolbox.git
+- release repository: https://github.com/ros-gbp/control_toolbox-release.git
+- rosdistro version: `1.14.0-0`
+- old version: `1.14.0-0`
+- new version: `1.15.0-0`
+
+Versions of tools used:
+
+- bloom version: `0.5.21`
+- catkin_pkg version: `0.2.10`
+- rosdep version: `0.11.5`
+- rosdistro version: `0.4.7`
+- vcstools version: `0.1.38`
+
+
 ## control_toolbox (kinetic) - 1.14.0-0
 
 The packages in the `control_toolbox` repository were released into the `kinetic` distro by running `/usr/bin/bloom-release --rosdistro kinetic --track kinetic control_toolbox --edit` on `Tue, 03 May 2016 16:09:20 -0000`
