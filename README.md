@@ -1,3 +1,26 @@
+## control_toolbox (lunar) - 1.16.0-0
+
+The packages in the `control_toolbox` repository were released into the `lunar` distro by running `/usr/bin/bloom-release control_toolbox --track lunar --rosdistro lunar` on `Thu, 30 Nov 2017 10:34:37 -0000`
+
+The `control_toolbox` package was released.
+
+Version of package(s) in repository `control_toolbox`:
+
+- upstream repository: https://github.com/ros-controls/control_toolbox.git
+- release repository: https://github.com/ros-gbp/control_toolbox-release.git
+- rosdistro version: `1.15.0-0`
+- old version: `1.15.0-0`
+- new version: `1.16.0-0`
+
+Versions of tools used:
+
+- bloom version: `0.6.1`
+- catkin_pkg version: `0.3.9`
+- rosdep version: `0.11.8`
+- rosdistro version: `0.6.2`
+- vcstools version: `0.1.39`
+
+
 ## control_toolbox (kinetic) - 1.16.0-0
 
 The packages in the `control_toolbox` repository were released into the `kinetic` distro by running `/usr/bin/bloom-release control_toolbox --track kinetic --rosdistro kinetic` on `Thu, 30 Nov 2017 10:13:42 -0000`
