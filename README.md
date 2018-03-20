@@ -1,3 +1,26 @@
+## control_toolbox (melodic) - 1.16.0-0
+
+The packages in the `control_toolbox` repository were released into the `melodic` distro by running `/usr/bin/bloom-release --rosdistro melodic --track melodic control_toolbox --edit` on `Tue, 20 Mar 2018 16:32:00 -0000`
+
+The `control_toolbox` package was released.
+
+Version of package(s) in repository `control_toolbox`:
+
+- upstream repository: https://github.com/ros-controls/control_toolbox.git
+- release repository: unknown
+- rosdistro version: `null`
+- old version: `null`
+- new version: `1.16.0-0`
+
+Versions of tools used:
+
+- bloom version: `0.6.3`
+- catkin_pkg version: `0.4.1`
+- rosdep version: `0.12.1`
+- rosdistro version: `0.6.8`
+- vcstools version: `0.1.40`
+
+
 ## control_toolbox (lunar) - 1.16.0-0
 
 The packages in the `control_toolbox` repository were released into the `lunar` distro by running `/usr/bin/bloom-release control_toolbox --track lunar --rosdistro lunar` on `Thu, 30 Nov 2017 10:34:37 -0000`
