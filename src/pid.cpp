@@ -41,16 +41,14 @@
 #include <control_toolbox/pid.h>
 #include <tinyxml.h>
 
-#include <boost/algorithm/clamp.hpp>
-
 namespace control_toolbox {
 
 static const std::string DEFAULT_NAMESPACE = "pid"; // \todo better default prefix?
 
-Pid::Pid(double p, double i, double d, double i_max, double i_min, bool antiwindup)
+Pid::Pid(double p, double i, double d, double i_max, double i_min)
   : dynamic_reconfig_initialized_(false)
 {
-  setGains(p,i,d,i_max,i_min,antiwindup);
+  setGains(p,i,d,i_max,i_min);
 
   reset();
 }
@@ -79,19 +77,9 @@ void Pid::initPid(double p, double i, double d, double i_max, double i_min,
   initDynamicReconfig(nh);
 }
 
-void Pid::initPid(double p, double i, double d, double i_max, double i_min, bool antiwindup,
-  const ros::NodeHandle& /*node*/)
+void Pid::initPid(double p, double i, double d, double i_max, double i_min)
 {
-  initPid(p, i, d, i_max, i_min, antiwindup);
-
-  // Create node handle for dynamic reconfigure
-  ros::NodeHandle nh(DEFAULT_NAMESPACE);
-  initDynamicReconfig(nh);
-}
-
-void Pid::initPid(double p, double i, double d, double i_max, double i_min, bool antiwindup)
-{
-  setGains(p,i,d,i_max,i_min, antiwindup);
+  setGains(p,i,d,i_max,i_min);
 
   reset();
 }
@@ -135,15 +123,6 @@ bool Pid::init(const ros::NodeHandle &node, const bool quiet)
     nh.param("i_clamp_max", gains.i_max_, gains.i_max_); // use i_clamp_max parameter, otherwise keep i_clamp
     gains.i_max_ = std::abs(gains.i_max_); // make sure the value is >= 0
   }
-  nh.param("antiwindup", gains.antiwindup_, false);
-
-  nh.param("publish_state", publish_state_, false);
-
-  if(publish_state_)
-  {
-    state_publisher_.reset(new realtime_tools::RealtimePublisher<control_msgs::PidState>());
-    state_publisher_->init(nh, "state", 1);
-  }
 
   setGains(gains);
 
@@ -166,8 +145,7 @@ bool Pid::initXml(TiXmlElement *config)
     config->Attribute("i") ? atof(config->Attribute("i")) : 0.0,
     config->Attribute("d") ? atof(config->Attribute("d")) : 0.0,
     std::abs(i_clamp),
-    -std::abs(i_clamp),
-    config->Attribute("antiwindup") ? atof(config->Attribute("antiwindup")) : false
+    -std::abs(i_clamp)
   );
 
   reset();
@@ -204,12 +182,6 @@ void Pid::reset()
 
 void Pid::getGains(double &p, double &i, double &d, double &i_max, double &i_min)
 {
-  bool antiwindup;
-  getGains(p, i, d, i_max, i_min, antiwindup);
-}
-
-void Pid::getGains(double &p, double &i, double &d, double &i_max, double &i_min, bool &antiwindup)
-{
   Gains gains = *gains_buffer_.readFromRT();
 
   p     = gains.p_gain_;
@@ -217,7 +189,6 @@ void Pid::getGains(double &p, double &i, double &d, double &i_max, double &i_min
   d     = gains.d_gain_;
   i_max = gains.i_max_;
   i_min = gains.i_min_;
-  antiwindup = gains.antiwindup_;
 }
 
 Pid::Gains Pid::getGains()
@@ -225,9 +196,9 @@ Pid::Gains Pid::getGains()
   return *gains_buffer_.readFromRT();
 }
 
-void Pid::setGains(double p, double i, double d, double i_max, double i_min, bool antiwindup)
+void Pid::setGains(double p, double i, double d, double i_max, double i_min)
 {
-  Gains gains(p,i,d,i_max,i_min, antiwindup);
+  Gains gains(p,i,d,i_max,i_min);
 
   setGains(gains);
 }
@@ -250,7 +221,7 @@ void Pid::updateDynamicReconfig()
   control_toolbox::ParametersConfig config;
 
   // Get starting values
-  getGains(config.p, config.i, config.d, config.i_clamp_max, config.i_clamp_min, config.antiwindup);
+  getGains(config.p, config.i, config.d, config.i_clamp_max, config.i_clamp_min);
 
   updateDynamicReconfig(config);
 }
@@ -269,7 +240,6 @@ void Pid::updateDynamicReconfig(Gains gains_config)
   config.d = gains_config.d_gain_;
   config.i_clamp_max = gains_config.i_max_;
   config.i_clamp_min = gains_config.i_min_;
-  config.antiwindup = gains_config.antiwindup_;
 
   updateDynamicReconfig(config);
 }
@@ -291,7 +261,7 @@ void Pid::dynamicReconfigCallback(control_toolbox::ParametersConfig &config, uin
   ROS_DEBUG_STREAM_NAMED("pid","Dynamics reconfigure callback recieved.");
 
   // Set the gains
-  setGains(config.p, config.i, config.d, config.i_clamp_max, config.i_clamp_min, config.antiwindup);
+  setGains(config.p, config.i, config.d, config.i_clamp_max, config.i_clamp_min);
 }
 
 double Pid::computeCommand(double error, ros::Duration dt)
@@ -329,56 +299,24 @@ double Pid::computeCommand(double error, double error_dot, ros::Duration dt)
   if (dt == ros::Duration(0.0) || std::isnan(error) || std::isinf(error) || std::isnan(error_dot) || std::isinf(error_dot))
     return 0.0;
 
+
   // Calculate proportional contribution to command
   p_term = gains.p_gain_ * p_error_;
 
   // Calculate the integral of the position error
   i_error_ += dt.toSec() * p_error_;
 
-  if(gains.antiwindup_)
-  {
-    // Prevent i_error_ from climbing higher than permitted by i_max_/i_min_
-    i_error_ = boost::algorithm::clamp(i_error_,
-                                       gains.i_min_ / std::abs(gains.i_gain_),
-                                       gains.i_max_ / std::abs(gains.i_gain_));
-  }
-
   // Calculate integral contribution to command
   i_term = gains.i_gain_ * i_error_;
 
-  if(!gains.antiwindup_)
-  {
-    // Limit i_term so that the limit is meaningful in the output
-    i_term = boost::algorithm::clamp(i_term, gains.i_min_, gains.i_max_);
-  }
+  // Limit i_term so that the limit is meaningful in the output
+  i_term = std::max( gains.i_min_, std::min( i_term, gains.i_max_) );
 
   // Calculate derivative contribution to command
   d_term = gains.d_gain_ * d_error_;
 
   // Compute the command
   cmd_ = p_term + i_term + d_term;
-
-  // Publish controller state if configured
-  if (publish_state_ && state_publisher_)
-  {
-    if (state_publisher_->trylock())
-    {
-      state_publisher_->msg_.header.stamp = ros::Time::now();
-      state_publisher_->msg_.timestep = dt;
-      state_publisher_->msg_.error = error;
-      state_publisher_->msg_.error_dot = error_dot;
-      state_publisher_->msg_.p_error = p_error_;
-      state_publisher_->msg_.i_error = i_error_;
-      state_publisher_->msg_.d_error = d_error_;
-      state_publisher_->msg_.p_term = p_term;
-      state_publisher_->msg_.i_term = i_term;
-      state_publisher_->msg_.d_term = d_term;
-      state_publisher_->msg_.i_max = gains.i_max_;
-      state_publisher_->msg_.i_min = gains.i_min_;
-      state_publisher_->msg_.output = cmd_;
-      state_publisher_->unlockAndPublish();
-    }
-  }
 
   return cmd_;
 }
@@ -418,7 +356,6 @@ void Pid::printValues()
     << "  D Gain: " << gains.d_gain_ << "\n"
     << "  I_Max:  " << gains.i_max_  << "\n"
     << "  I_Min:  " << gains.i_min_  << "\n"
-    << "  Antiwindup:  " << gains.antiwindup_  << "\n"
     << "  P_Error_Last: " << p_error_last_  << "\n"
     << "  P_Error:      " << p_error_  << "\n"
     << "  I_Error:       " << i_error_  << "\n"

@@ -2,33 +2,14 @@
 Changelog for package control_toolbox
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1.16.0 (2017-11-30)
+1.13.3 (2018-05-18)
 -------------------
-* switched to industrial_ci
-* Add control_msgs to CATKIN_DEPENDS.
-* Contributors: Bence Magyar, Mathias Luedtke, Mike Purvis
-
-1.15.0 (2016-06-28)
--------------------
-* avoid ABI breaks in PID class
-* fix add_dependencies call
-* rollback API changes in PID class
-* cfg: removed rosbuild support related error handling
-* Contributors: Bence Magyar, Igor Napolskikh, ipa-mig
-
-1.14.0 (2016-05-03)
--------------------
-* Fix negative gains issue and add tests; update gains setting through DynamicReconfig
-* Add antiwindup and tests to PID controller; rename old behaviour 'clamping'
-* Move message to control_toolbox
-* Add optional state publishing to PID controller, for logging/debugging/etc
-* Fix some typos in comments
 * changed the range of dynamic reconfigure to allow negative ones
 * Address -Wunused-parameter warnings
 * Factor out updatePid as negative calls to computeCommand
 * Increasing covergae of PID class test suite.
 * Chain calls of computeCommand and updatePid for code reuse
-* Contributors: Adolfo Rodriguez Tsouroukdissian, Bence Magyar, Carlos Rosales, Guillaume Walck, Paul Bovbel, VahidAminZ
+* Contributors: Adolfo Rodriguez Tsouroukdissian, Bence Magyar, Carlos Rosales, Paul Bovbel, VahidAminZ
 
 1.13.2 (2015-05-22)
 -------------------
