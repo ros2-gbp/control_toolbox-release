@@ -1,0 +1,12 @@
+Source: ros-indigo-control-toolbox
+Section: misc
+Priority: extra
+Maintainer: Sachin Chitta <sachinc@willowgarage.com>
+Build-Depends: debhelper (>= 9.0.0), libtinyxml-dev, ros-indigo-catkin (>= 0.5.68), ros-indigo-cmake-modules, ros-indigo-dynamic-reconfigure, ros-indigo-message-generation, ros-indigo-realtime-tools, ros-indigo-roscpp, ros-indigo-std-msgs
+Homepage: http://ros.org/wiki/control_toolbox
+Standards-Version: 3.9.2
+
+Package: ros-indigo-control-toolbox
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libtinyxml-dev, ros-indigo-cmake-modules, ros-indigo-dynamic-reconfigure, ros-indigo-message-runtime, ros-indigo-realtime-tools, ros-indigo-roscpp, ros-indigo-std-msgs
+Description: The control toolbox contains modules that are useful across all controllers.
