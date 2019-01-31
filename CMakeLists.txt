@@ -4,10 +4,11 @@ project(control_toolbox)
 # Load catkin and all dependencies required for this package
 find_package(catkin REQUIRED COMPONENTS
   cmake_modules
-  message_generation
-  roscpp
+  control_msgs
   dynamic_reconfigure
+  message_generation
   realtime_tools
+  roscpp
   std_msgs
   )
 
@@ -33,10 +34,11 @@ generate_messages(
 catkin_package(
   DEPENDS TinyXML
   CATKIN_DEPENDS
-    roscpp
+    control_msgs
     dynamic_reconfigure
-    realtime_tools
     message_runtime
+    realtime_tools
+    roscpp
     std_msgs
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
@@ -50,18 +52,16 @@ include_directories(
   )
 
 add_library(${PROJECT_NAME}
+  src/dither.cpp
+  src/limited_proxy.cpp
   src/pid.cpp
   src/pid_gains_setter.cpp
   src/sine_sweep.cpp
-  src/dither.cpp
   src/sinusoid.cpp
-  src/limited_proxy.cpp
   )
-add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencfg) # wait for dynamic reconfigure
+add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(${PROJECT_NAME} ${TinyXML_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
-
-add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencpp) # wait for msgs
 
 if(CATKIN_ENABLE_TESTING)
   # Tests
