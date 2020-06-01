@@ -2,6 +2,12 @@
 Changelog for package control_toolbox
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+1.18.1 (2020-06-01)
+-------------------
+* Python 3 compat
+* Migrate to new industrial_ci
+* Contributors: Matt Reynolds, Tobias Fischer
+
 1.18.0 (2020-03-27)
 -------------------
 * Bump CMake version to avoid CMP0048 warning
