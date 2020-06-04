@@ -1,0 +1,12 @@
+Source: ros-noetic-control-toolbox
+Section: misc
+Priority: optional
+Maintainer: Bence Magyar <bence.magyar.robotics@gmail.com>
+Build-Depends: debhelper (>= 9.0.0), libtinyxml-dev, ros-noetic-catkin (>= 0.5.68), ros-noetic-cmake-modules, ros-noetic-control-msgs, ros-noetic-dynamic-reconfigure, ros-noetic-message-generation, ros-noetic-realtime-tools, ros-noetic-roscpp, ros-noetic-rosunit, ros-noetic-std-msgs
+Homepage: http://ros.org/wiki/control_toolbox
+Standards-Version: 3.9.2
+
+Package: ros-noetic-control-toolbox
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libtinyxml-dev, ros-noetic-control-msgs, ros-noetic-dynamic-reconfigure, ros-noetic-message-runtime, ros-noetic-realtime-tools, ros-noetic-roscpp, ros-noetic-std-msgs
+Description: The control toolbox contains modules that are useful across all controllers.
