@@ -2,6 +2,11 @@
 Changelog for package control_toolbox
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+1.18.2 (2020-06-04)
+-------------------
+* Python 3 compat part II
+* Contributors: Tobias Fischer
+
 1.18.1 (2020-06-01)
 -------------------
 * Python 3 compat
