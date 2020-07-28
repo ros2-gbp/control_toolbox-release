@@ -1,0 +1,12 @@
+Source: ros-foxy-control-toolbox
+Section: misc
+Priority: optional
+Maintainer: Bence Magyar <bence.magyar.robotics@gmail.com>
+Build-Depends: debhelper (>= 9.0.0), ros-foxy-ament-cmake, ros-foxy-ament-cmake-gmock, ros-foxy-ament-cmake-gtest, ros-foxy-ament-lint-auto, ros-foxy-ament-lint-common, ros-foxy-control-msgs, ros-foxy-rclcpp, ros-foxy-rclcpp-lifecycle, ros-foxy-realtime-tools, ros-foxy-ros-workspace
+Homepage: http://ros.org/wiki/control_toolbox
+Standards-Version: 3.9.2
+
+Package: ros-foxy-control-toolbox
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-foxy-control-msgs, ros-foxy-rclcpp, ros-foxy-realtime-tools, ros-foxy-ros-workspace
+Description: The control toolbox contains modules that are useful across all controllers.
