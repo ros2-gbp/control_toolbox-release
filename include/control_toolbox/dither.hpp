@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2008, Willow Garage, Inc.
+ *  Copyright (c) 2009, Willow Garage, Inc.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -32,58 +32,79 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-// Original version: Melonee Wise <mwise@willowgarage.com>
+/**< \author Kevin Watts */
+
+#ifndef CONTROL_TOOLBOX__DITHER_HPP_
+#define CONTROL_TOOLBOX__DITHER_HPP_
 
 #include <math.h>
+#include <cstdlib>
+#include <ctime>
+#include <random>
 
-#include "control_toolbox/sine_sweep.hpp"
+#include "rcutils/logging_macros.h"
 
 namespace control_toolbox
 {
-SineSweep::SineSweep()
-: amplitude_(0.0),
-  duration_(rclcpp::Duration(0, 0)),
-  start_angular_freq_(0.0),
-  end_angular_freq_(0.0),
-  K_(0.0),
-  L_(0.0),
-  cmd_(0.0)
+/***************************************************/
+/*! \class Dither
+ *
+ * \brief Gives white noise at specified amplitude.
+ *
+ * This class gives white noise at the given amplitude when
+ * update() is called. It can be used to vibrate joints or
+ * to break static friction.
+ *
+ */
+class Dither
 {
-}
+public:
+  Dither();
 
-bool SineSweep::init(double start_freq, double end_freq, double duration, double amplitude)
-{
-  if (start_freq > end_freq) {
-    return false;
-  }
-  if (duration < 0 || amplitude < 0) {
-    return false;
-  }
+  /*!
+   * \brief Get next Gaussian white noise point. Called in RT loop.
+   *\return White noise of given amplitude.
+   */
+  double update();
 
-  amplitude_ = amplitude;
-  duration_ = rclcpp::Duration::from_seconds(duration);
-  // calculate the angular fequencies
-  start_angular_freq_ = 2 * M_PI * start_freq;
-  end_angular_freq_ = 2 * M_PI * end_freq;
+  /*
+  *\brief Dither gets an amplitude, must be >0 to initialize
+  *
+  *\param amplitude Amplitude of white noise output
+  *\param seed Random seed for white noise
+  */
+  bool init(const double & amplitude, const double & seed)
+  {
+    if (amplitude < 0.0) {
+      RCUTILS_LOG_ERROR("Dither amplitude not set properly. Amplitude must be >0.");
+      return false;
+    }
 
-  // calculate the constants
-  K_ = (start_angular_freq_ * duration) / log(end_angular_freq_ / start_angular_freq_);
-  L_ = (duration) / log(end_angular_freq_ / start_angular_freq_);
+    amplitude_ = amplitude;
 
-  // zero out the command
-  cmd_ = 0.0;
+    // seed generator for reproducible sequence of random numbers
+    generator_.seed(static_cast<unsigned int>(seed));
 
-  return true;
-}
-
-double SineSweep::update(rclcpp::Duration dt)
-{
-  if (dt <= duration_) {
-    cmd_ = amplitude_ * sin(K_ * (exp((dt.seconds()) / (L_)) - 1));
-  } else {
-    cmd_ = 0.0;
+    return true;
   }
 
-  return cmd_;
-}
+  /*
+  *\brief Generate a random number with random_device for non-deterministic random numbers
+  */
+  static double generateRandomSeed()
+  {
+    std::random_device rdev{};
+    return static_cast<double>(rdev());
+  }
+
+private:
+  double amplitude_; /**< Amplitude of the sweep. */
+  double saved_value_;
+  bool has_saved_value_;
+  double s_;
+  double x_;
+  std::mt19937 generator_; /**< random number generator for white noise. */
+};
 }  // namespace control_toolbox
+
+#endif  // CONTROL_TOOLBOX__DITHER_HPP_

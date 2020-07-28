@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2009, Willow Garage, Inc.
+ *  Copyright (c) 2008, Willow Garage, Inc.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -31,87 +31,58 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
+#ifndef CONTROL_TOOLBOX__LIMITED_PROXY_HPP_
+#define CONTROL_TOOLBOX__LIMITED_PROXY_HPP_
 
-/**< \author Kevin Watts */
-
-#ifndef CONTROL_TOOLBOX__DITHER_H
-#define CONTROL_TOOLBOX__DITHER_H
-
-#include <cstdlib>
-#include <ctime>
-#include <math.h>
-#include <random>
-#include <ros/ros.h>
-
-namespace control_toolbox {
-
-/***************************************************/
-/*! \class Dither
- *
- * \brief Gives white noise at specified amplitude.
- *
- * This class gives white noise at the given amplitude when 
- * update() is called. It can be used to vibrate joints or 
- * to break static friction.
- *
- */
-class Dither
+namespace control_toolbox
+{
+class LimitedProxy
 {
 public:
+  // Controller parameter values
+  double mass_;             // Estimate of the joint mass
+  double Kd_;               // Damping gain
+  double Kp_;               // Position gain
+  double Ki_;               // Integral gain
+  double Ficl_;             // Integral force clamp
+  double effort_limit_;     // Limit on output force
+  double vel_limit_;        // Limit on velocity
+  double pos_upper_limit_;  // Upper position bound
+  double pos_lower_limit_;  // Lower position bound
+  double lambda_proxy_;     // Bandwidth of proxy reconvergence
+  double acc_converge_;     // Acceleration of proxy reconvergence
 
-  Dither();
-
-  /*!
-   * \brief Destructor.
-   */
-  ~Dither();
-
-  /*!
-   * \brief Get next Gaussian white noise point. Called in RT loop.
-   *\return White noise of given amplitude.
-   */
-  double update();
-
-   /*
-   *\brief Dither gets an amplitude, must be >0 to initialize
-   *
-   *\param amplitude Amplitude of white noise output
-   *\param seed Random seed for white noise
-   */
-  bool init(const double &amplitude, const double &seed)
+  LimitedProxy()
+  : mass_(0.0),
+    Kd_(0.0),
+    Kp_(0.0),
+    Ki_(0.0),
+    Ficl_(0.0),
+    effort_limit_(0.0),
+    vel_limit_(0.0),
+    pos_upper_limit_(0.0),
+    pos_lower_limit_(0.0),
+    lambda_proxy_(0.0),
+    acc_converge_(0.0)
   {
-    if (amplitude < 0.0)
-    {
-      ROS_ERROR("Dither amplitude not set properly. Amplitude must be >0.");
-      return false;
-    }
-    
-    amplitude_ = amplitude;
-
-    // seed generator for reproducible sequence of random numbers
-    generator_.seed(static_cast<unsigned int>(seed));
-
-    return true;
   }
 
-   /*
-   *\brief Generate a random number with random_device for non-deterministic random numbers
-   */
-  static double generateRandomSeed()
-  {
-    std::random_device rdev{};
-    return static_cast<double>(rdev());
-  }
+  void reset(double pos_act, double vel_act);
 
+  double update(
+    double pos_des, double vel_des, double acc_des, double pos_act, double vel_act, double dt);
 
 private:
-  double amplitude_;   /**< Amplitude of the sweep. */
-  double saved_value_;
-  bool has_saved_value_;
-  double s_;
-  double x_;
-  std::mt19937 generator_;   /**< random number generator for white noise. */
-};
-}
+  // Controller state values
+  double last_proxy_pos_;  // Proxy position
+  double last_proxy_vel_;  // Proxy velocity
+  double last_proxy_acc_;  // Proxy acceleration
 
-#endif
+  double last_vel_error_;  // Velocity error
+  double last_pos_error_;  // Position error
+  double last_int_error_;  // Integral error
+};
+
+}  // namespace control_toolbox
+
+#endif  // CONTROL_TOOLBOX__LIMITED_PROXY_HPP_

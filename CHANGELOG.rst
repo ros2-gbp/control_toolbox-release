@@ -2,23 +2,25 @@
 Changelog for package control_toolbox
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1.18.2 (2020-06-04)
--------------------
-* Python 3 compat part II
-* Contributors: Tobias Fischer
-
-1.18.1 (2020-06-01)
--------------------
-* Python 3 compat
-* Migrate to new industrial_ci
-* Contributors: Matt Reynolds, Tobias Fischer
-
-1.18.0 (2020-03-27)
--------------------
-* Bump CMake version to avoid CMP0048 warning
-* add static method to generate non-deterministic seed
-* migrate to STL random library
-* Contributors: James Xu, Shane Loretz, ahcorde
+2.0.0 (2020-07-28)
+------------------
+* Refactor the Pid class to be completely ROS agnostic and added a ROS 2 wrapper
+* Avoid crash when the type of the parameter doesn't match
+* Added topic_prefix to publisher topic name (`#95 <https://github.com/ros-controls/control_toolbox/issues/95>`_)
+* Created a shared library (`#93 <https://github.com/ros-controls/control_toolbox/issues/93>`_)
+* Aliases not part of the public API are now private
+* Removing pid_gains_setter
+* Removed unnecessary dependencies
+* Cleared empty non virtual destructors
+* Removed unused limited proxy variables
+* Added pid state real-time publisher
+* Removed all references to tinyxml
+* Removed tune_pid.py
+* Adding missing copyright licenses
+* Adapted dither, sine_sweep and sinusoid to ROS2
+* Removed dynamic reconfigure completely
+* Removed deprecated functions
+* Contributors: Alejandro Hernández Cordero, Bence Magyar, James Xu, Jordan Palacios, Shane Loretz, ahcorde
 
 1.17.0 (2019-01-31)
 -------------------

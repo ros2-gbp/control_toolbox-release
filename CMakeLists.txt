@@ -1,86 +1,67 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.5)
 project(control_toolbox)
 
-# Load catkin and all dependencies required for this package
-find_package(catkin REQUIRED COMPONENTS
-  cmake_modules
-  control_msgs
-  dynamic_reconfigure
-  message_generation
-  realtime_tools
-  roscpp
-  std_msgs
-  )
+# Default to C++14
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
 
-find_package(Boost REQUIRED COMPONENTS system thread)
-find_package(TinyXML REQUIRED)
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
 
-# Dynamics reconfigure
-generate_dynamic_reconfigure_options(
-  cfg/Parameters.cfg
-  )
+find_package(ament_cmake REQUIRED)
+find_package(control_msgs REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(realtime_tools REQUIRED)
 
-# Add services and generate them
-add_service_files(
-  FILES
-  SetPidGains.srv
-  )
-
-generate_messages(
-  DEPENDENCIES std_msgs
-)
-
-# Declare catkin package
-catkin_package(
-  DEPENDS TinyXML
-  CATKIN_DEPENDS
-    control_msgs
-    dynamic_reconfigure
-    message_runtime
-    realtime_tools
-    roscpp
-    std_msgs
-  INCLUDE_DIRS include
-  LIBRARIES ${PROJECT_NAME}
-  )
-
-include_directories(
-  include
-  ${catkin_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIR}
-  ${TinyXML_INCLUDE_DIRS}
-  )
-
-add_library(${PROJECT_NAME}
+add_library(${PROJECT_NAME} SHARED
   src/dither.cpp
   src/limited_proxy.cpp
+  src/pid_ros.cpp
   src/pid.cpp
-  src/pid_gains_setter.cpp
   src/sine_sweep.cpp
-  src/sinusoid.cpp
-  )
-add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+  src/sinusoid.cpp)
+target_include_directories(${PROJECT_NAME} PUBLIC include)
+ament_target_dependencies(${PROJECT_NAME}
+    control_msgs
+    rclcpp
+    realtime_tools)
 
-target_link_libraries(${PROJECT_NAME} ${TinyXML_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+if(BUILD_TESTING)
+  find_package(ament_cmake_gmock REQUIRED)
+  find_package(ament_cmake_gtest REQUIRED)
+  find_package(ament_lint_auto REQUIRED)
+  find_package(rclcpp_lifecycle REQUIRED)
+  list(APPEND AMENT_LINT_AUTO_EXCLUDE ament_cmake_copyright)
 
-if(CATKIN_ENABLE_TESTING)
-  # Tests
-  catkin_add_gtest(pid_tests test/pid_tests.cpp)
-  target_link_libraries(pid_tests ${catkin_LIBRARIES} ${PROJECT_NAME})
+  ament_lint_auto_find_test_dependencies()
 
-  # add_executable(test_linear test/linear.cpp)
+  ament_add_gmock(pid_tests test/pid_tests.cpp)
+  target_link_libraries(pid_tests ${PROJECT_NAME})
+
+  ament_add_gtest(pid_parameters_tests test/pid_parameters_tests.cpp)
+  target_link_libraries(pid_parameters_tests ${PROJECT_NAME})
+
+  ament_add_gtest(pid_publisher_tests test/pid_publisher_tests.cpp)
+  target_link_libraries(pid_publisher_tests ${PROJECT_NAME})
+  ament_target_dependencies(pid_publisher_tests rclcpp_lifecycle)
 endif()
 
 # Install
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+install(DIRECTORY include/
+  DESTINATION include)
 
-# Install library
 install(TARGETS ${PROJECT_NAME}
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
-  )
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin)
 
-install(DIRECTORY scripts/
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+ament_export_dependencies(
+  control_msgs
+  rclcpp
+  realtime_tools)
+ament_export_include_directories(include)
+ament_export_libraries(${PROJECT_NAME})
+
+ament_package()
