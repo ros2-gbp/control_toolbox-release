@@ -2,6 +2,12 @@
 Changelog for package control_toolbox
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.0.1 (2020-08-01)
+------------------
+* Fix dependencies
+* Export ament_cmake build type
+* Contributors: ahcorde
+
 2.0.0 (2020-07-28)
 ------------------
 * Refactor the Pid class to be completely ROS agnostic and added a ROS 2 wrapper
