@@ -32,77 +32,38 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/**< \author Kevin Watts */
+#ifndef CONTROL_TOOLBOX__VISIBILITY_CONTROL_HPP_
+#define CONTROL_TOOLBOX__VISIBILITY_CONTROL_HPP_
 
-#ifndef CONTROL_TOOLBOX__DITHER_HPP_
-#define CONTROL_TOOLBOX__DITHER_HPP_
+// This logic was borrowed (then namespaced) from the examples on the gcc wiki:
+//     https://gcc.gnu.org/wiki/Visibility
 
-#include <math.h>
-#include <cstdlib>
-#include <ctime>
-#include <random>
+#if defined _WIN32 || defined __CYGWIN__
+  #ifdef __GNUC__
+    #define CONTROL_TOOLBOX_EXPORT __attribute__ ((dllexport))
+    #define CONTROL_TOOLBOX_IMPORT __attribute__ ((dllimport))
+  #else
+    #define CONTROL_TOOLBOX_EXPORT __declspec(dllexport)
+    #define CONTROL_TOOLBOX_IMPORT __declspec(dllimport)
+  #endif
+  #ifdef CONTROL_TOOLBOX_BUILDING_LIBRARY
+    #define CONTROL_TOOLBOX_PUBLIC CONTROL_TOOLBOX_EXPORT
+  #else
+    #define CONTROL_TOOLBOX_PUBLIC CONTROL_TOOLBOX_IMPORT
+  #endif
+  #define CONTROL_TOOLBOX_PUBLIC_TYPE CONTROL_TOOLBOX_PUBLIC
+  #define CONTROL_TOOLBOX_LOCAL
+#else
+  #define CONTROL_TOOLBOX_EXPORT __attribute__ ((visibility("default")))
+  #define CONTROL_TOOLBOX_IMPORT
+  #if __GNUC__ >= 4
+    #define CONTROL_TOOLBOX_PUBLIC __attribute__ ((visibility("default")))
+    #define CONTROL_TOOLBOX_LOCAL  __attribute__ ((visibility("hidden")))
+  #else
+    #define CONTROL_TOOLBOX_PUBLIC
+    #define CONTROL_TOOLBOX_LOCAL
+  #endif
+  #define CONTROL_TOOLBOX_PUBLIC_TYPE
+#endif
 
-#include "rcutils/logging_macros.h"
-
-namespace control_toolbox
-{
-/***************************************************/
-/*! \class Dither
- *
- * \brief Gives white noise at specified amplitude.
- *
- * This class gives white noise at the given amplitude when
- * update() is called. It can be used to vibrate joints or
- * to break static friction.
- *
- */
-class Dither
-{
-public:
-  Dither();
-
-  /*!
-   * \brief Get next Gaussian white noise point. Called in RT loop.
-   *\return White noise of given amplitude.
-   */
-  double update();
-
-  /*
-  *\brief Dither gets an amplitude, must be >0 to initialize
-  *
-  *\param amplitude Amplitude of white noise output
-  *\param seed Random seed for white noise
-  */
-  bool init(const double & amplitude, const double & seed)
-  {
-    if (amplitude < 0.0) {
-      RCUTILS_LOG_ERROR("Dither amplitude not set properly. Amplitude must be >0.");
-      return false;
-    }
-
-    amplitude_ = amplitude;
-
-    // seed generator for reproducible sequence of random numbers
-    generator_.seed(static_cast<unsigned int>(seed));
-
-    return true;
-  }
-
-  /*
-  *\brief Generate a random number with random_device for non-deterministic random numbers
-  */
-  static double generateRandomSeed()
-  {
-    std::random_device rdev{};
-    return static_cast<double>(rdev());
-  }
-
-private:
-  double amplitude_; /**< Amplitude of the sweep. */
-  double saved_value_;
-  bool has_saved_value_;
-  std::mt19937 generator_; /**< random number generator for white noise. */
-};
-}  // namespace control_toolbox
-
-#endif  // CONTROL_TOOLBOX__DITHER_HPP_
+#endif  // CONTROL_TOOLBOX__VISIBILITY_CONTROL_HPP_
