@@ -14,8 +14,8 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-      - uses: ros-tooling/setup-ros@0.0.23
-      - uses: ros-tooling/action-ros-ci@0.0.17
+      - uses: ros-tooling/setup-ros@v0.1
+      - uses: ros-tooling/action-ros-ci@v0.1
         with:
           vcs-repo-file-url: |
             https://raw.githubusercontent.com/ros-controls/control_toolbox/ros2-master/control_toolbox.rosinstall
@@ -23,6 +23,7 @@ jobs:
           package-name: control_toolbox
           colcon-mixin-name: coverage-gcc
           colcon-mixin-repository: https://raw.githubusercontent.com/colcon/colcon-mixin-repository/master/index.yaml
+          target-ros2-distro: foxy
       - uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -31,7 +32,7 @@ jobs:
           name: codecov-umbrella
           yml: ./codecov.yml
           fail_ci_if_error: true
-      - uses: actions/upload-artifact@master
+      - uses: actions/upload-artifact@v1
         with:
           name: colcon-logs-${{ matrix.os }}
           path: ros_ws/log
