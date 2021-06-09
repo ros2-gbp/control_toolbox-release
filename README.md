@@ -1,3 +1,26 @@
+## control_toolbox (rolling) - 2.0.2-1
+
+The packages in the `control_toolbox` repository were released into the `rolling` distro by running `/usr/local/bin/bloom-release --track rolling --rosdistro rolling control_toolbox` on `Wed, 09 Jun 2021 09:48:23 -0000`
+
+The `control_toolbox` package was released.
+
+Version of package(s) in repository `control_toolbox`:
+
+- upstream repository: https://github.com/ros-controls/control_toolbox.git
+- release repository: unknown
+- rosdistro version: `null`
+- old version: `null`
+- new version: `2.0.2-1`
+
+Versions of tools used:
+
+- bloom version: `0.10.7`
+- catkin_pkg version: `0.4.23`
+- rosdep version: `0.19.0`
+- rosdistro version: `0.8.3`
+- vcstools version: `0.1.42`
+
+
 ## control_toolbox (foxy) - 2.0.2-1
 
 The packages in the `control_toolbox` repository were released into the `foxy` distro by running `/home/bence/.local/bin/bloom-release --track foxy --rosdistro foxy control_toolbox` on `Tue, 25 May 2021 15:52:44 -0000`
