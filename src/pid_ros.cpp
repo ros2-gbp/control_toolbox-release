@@ -1,36 +1,35 @@
-/*********************************************************************
- * Software License Agreement (BSD License)
- *
- *  Copyright (c) 2020, Open Source Robotics Foundation, Inc.
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions
- *  are met:
- *
- *   * Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above
- *     copyright notice, this list of conditions and the following
- *     disclaimer in the documentation and/or other materials provided
- *     with the distribution.
- *   * Neither the name of the Open Source Robotics Foundation nor the names of its
- *     contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *  POSSIBILITY OF SUCH DAMAGE.
- *********************************************************************/
+// Copyright (c) 2020, Open Source Robotics Foundation, Inc.
+// All rights reserved.
+//
+// Software License Agreement (BSD License 2.0)
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+//
+//  * Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+//  * Redistributions in binary form must reproduce the above
+//    copyright notice, this list of conditions and the following
+//    disclaimer in the documentation and/or other materials provided
+//    with the distribution.
+//  * Neither the name of the Willow Garage nor the names of its
+//    contributors may be used to endorse or promote products derived
+//    from this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+// COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+// ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
 #include <algorithm>
 #include <cmath>
 #include <memory>
@@ -92,13 +91,13 @@ PidROS::getDoubleParam(const std::string & param_name, double & value)
       return false;
     }
     value = param.as_double();
-    RCLCPP_INFO_STREAM(
+    RCLCPP_DEBUG_STREAM(
       node_logging_->get_logger(),
       "parameter '" << param_name << "' in node '" << node_base_->get_name() <<
         "' value is " << value << std::endl);
     return true;
   } else {
-    RCLCPP_INFO_STREAM(
+    RCLCPP_ERROR_STREAM(
       node_logging_->get_logger(),
       "parameter '" << param_name << "' in node '" << node_base_->get_name() <<
         "' does not exists" << std::endl);
@@ -142,12 +141,12 @@ PidROS::initPid(double p, double i, double d, double i_max, double i_min, bool a
 {
   pid_.initPid(p, i, d, i_max, i_min, antiwindup);
 
-  declareParam("p", rclcpp::ParameterValue(p));
-  declareParam("i", rclcpp::ParameterValue(i));
-  declareParam("d", rclcpp::ParameterValue(d));
-  declareParam("i_clamp_max", rclcpp::ParameterValue(i_max));
-  declareParam("i_clamp_min", rclcpp::ParameterValue(i_min));
-  declareParam("antiwindup", rclcpp::ParameterValue(antiwindup));
+  declareParam(topic_prefix_ + "p", rclcpp::ParameterValue(p));
+  declareParam(topic_prefix_ + "i", rclcpp::ParameterValue(i));
+  declareParam(topic_prefix_ + "d", rclcpp::ParameterValue(d));
+  declareParam(topic_prefix_ + "i_clamp_max", rclcpp::ParameterValue(i_max));
+  declareParam(topic_prefix_ + "i_clamp_min", rclcpp::ParameterValue(i_min));
+  declareParam(topic_prefix_ + "antiwindup", rclcpp::ParameterValue(antiwindup));
 
   setParameterEventCallback();
 }
@@ -169,6 +168,14 @@ double
 PidROS::computeCommand(double error, rclcpp::Duration dt)
 {
   double cmd_ = pid_.computeCommand(error, dt.nanoseconds());
+  publishPIDState(cmd_, error, dt);
+
+  return cmd_;
+}
+
+double PidROS::computeCommand(double error, double error_dot, rclcpp::Duration dt)
+{
+  double cmd_ = pid_.computeCommand(error, error_dot, dt.nanoseconds());
   publishPIDState(cmd_, error, dt);
 
   return cmd_;
@@ -291,17 +298,17 @@ PidROS::setParameterEventCallback()
       for (auto & parameter : parameters) {
         const std::string param_name = parameter.get_name();
         try {
-          if (param_name == "p") {
+          if (param_name == topic_prefix_ + "p") {
             gains.p_gain_ = parameter.get_value<double>();
-          } else if (param_name == "i") {
+          } else if (param_name == topic_prefix_ + "i") {
             gains.i_gain_ = parameter.get_value<double>();
-          } else if (param_name == "d") {
+          } else if (param_name == topic_prefix_ + "d") {
             gains.d_gain_ = parameter.get_value<double>();
-          } else if (param_name == "i_clamp_max") {
+          } else if (param_name == topic_prefix_ + "i_clamp_max") {
             gains.i_max_ = parameter.get_value<double>();
-          } else if (param_name == "i_clamp_min") {
+          } else if (param_name == topic_prefix_ + "i_clamp_min") {
             gains.i_min_ = parameter.get_value<double>();
-          } else if (param_name == "antiwindup") {
+          } else if (param_name == topic_prefix_ + "antiwindup") {
             gains.antiwindup_ = parameter.get_value<bool>();
           } else {
             result.successful = false;
