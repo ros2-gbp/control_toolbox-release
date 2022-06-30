@@ -71,7 +71,7 @@ tracks:
     name: upstream
     patches: null
     release_inc: '3'
-    release_repo_url: git@github.com:ros-gbp/control_toolbox-release.git
+    release_repo_url: git@github.com:ros2-gbp/control_toolbox-release.git
     release_tag: :{version}
     ros_distro: humble
     vcs_type: git
