@@ -1,3 +1,26 @@
+## control_toolbox (humble) - 2.1.1-1
+
+The packages in the `control_toolbox` repository were released into the `humble` distro by running `/usr/local/bin/bloom-release --track humble --rosdistro humble control_toolbox` on `Sat, 05 Nov 2022 08:25:45 -0000`
+
+The `control_toolbox` package was released.
+
+Version of package(s) in repository `control_toolbox`:
+
+- upstream repository: https://github.com/ros-controls/control_toolbox.git
+- release repository: https://github.com/ros2-gbp/control_toolbox-release.git
+- rosdistro version: `2.1.0-1`
+- old version: `2.1.0-1`
+- new version: `2.1.1-1`
+
+Versions of tools used:
+
+- bloom version: `0.10.7`
+- catkin_pkg version: `0.5.2`
+- rosdep version: `0.19.0`
+- rosdistro version: `0.9.0`
+- vcstools version: `0.1.42`
+
+
 ## control_toolbox (rolling) - 2.1.1-1
 
 The packages in the `control_toolbox` repository were released into the `rolling` distro by running `/usr/local/bin/bloom-release --track rolling --rosdistro rolling control_toolbox` on `Sat, 05 Nov 2022 08:18:15 -0000`
