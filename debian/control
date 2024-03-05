@@ -1,0 +1,12 @@
+Source: ros-rolling-control-toolbox
+Section: misc
+Priority: optional
+Maintainer: Bence Magyar <bence.magyar.robotics@gmail.com>
+Build-Depends: debhelper (>= 9.0.0), ament-cmake, ament-cmake-googletest <!nocheck>, libgeometry-msgs-dev, librcutils-dev, pluginlib-dev, python3-geometry-msgs, python3-rcutils, ros-geometry-msgs, ros-rolling-control-msgs, ros-rolling-filters, ros-rolling-generate-parameter-library, ros-rolling-rclcpp, ros-rolling-rclcpp-lifecycle <!nocheck>, ros-rolling-realtime-tools, ros-rolling-ros-workspace
+Homepage: http://ros.org/wiki/control_toolbox
+Standards-Version: 3.9.2
+
+Package: ros-rolling-control-toolbox
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libgeometry-msgs-dev, librcutils-dev, pluginlib-dev, python3-geometry-msgs, python3-rcutils, ros-geometry-msgs, ros-rolling-control-msgs, ros-rolling-filters, ros-rolling-generate-parameter-library, ros-rolling-rclcpp, ros-rolling-realtime-tools, ros-rolling-ros-workspace
+Description: The control toolbox contains modules that are useful across all controllers.
