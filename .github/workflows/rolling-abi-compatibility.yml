@@ -1,0 +1,28 @@
+name: ABI Compatibility Check
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - ros2-master
+
+jobs:
+  abi_check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ROS_DISTRO: [rolling, jazzy]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ros-industrial/industrial_ci@master
+        env:
+          ROS_DISTRO: ${{ matrix.ROS_DISTRO }}
+          ROS_REPO: testing
+          ABICHECK_URL: github:${{ github.repository }}#${{ github.base_ref }}
+          NOT_TEST_BUILD: true
+          BASEDIR: ${{ github.workspace }}/.work
+      - uses: actions/upload-artifact@v4.6.0
+        if: always()
+        with:
+          name: abi-checker-report-${{ matrix.ROS_DISTRO }}
+          path: ${{ github.workspace }}/.work/abicheck/${{ github.base_ref }}
