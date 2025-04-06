@@ -1,4 +1,4 @@
-// Copyright (c) 2024, AIT Austrian Institute of Technology GmbH
+// Copyright 2024 AIT - Austrian Institute of Technology GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,17 +11,16 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-#include <gmock/gmock.h>
 #include <memory>
 #include <string>
 
-#include "rclcpp/utilities.hpp"
+#include "gmock/gmock.h"
 #include "pluginlib/class_loader.hpp"
+#include "rclcpp/utilities.hpp"
 
-#include "control_filters/exponential_filter.hpp"
+#include "control_filters/rate_limiter.hpp"
 
-TEST(TestLoadExponentialFilter, load_exponential_filter_double)
+TEST(TestLoadRateLimtier, load_rate_limiter_double)
 {
   rclcpp::init(0, nullptr);
 
@@ -36,9 +35,9 @@ TEST(TestLoadExponentialFilter, load_exponential_filter_double)
     sstr << "  " << available_class << std::endl;
   }
 
-  std::string filter_type = "control_filters/ExponentialFilterDouble";
+  std::string filter_type = "control_filters/RateLimiterDouble";
   ASSERT_TRUE(filter_loader.isClassAvailable(filter_type)) << sstr.str();
-  EXPECT_NO_THROW(filter = filter_loader.createSharedInstance(filter_type)) << sstr.str();
+  EXPECT_NO_THROW(filter = filter_loader.createSharedInstance(filter_type));
 
   rclcpp::shutdown();
 }
