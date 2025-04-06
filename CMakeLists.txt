@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 project(control_toolbox LANGUAGES CXX)
 
-find_package(ros2_control_cmake REQUIRED)
-set_compiler_options()
+if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang)")
+  add_compile_options(-Wall -Wextra -Wpedantic -Werror=conversion -Werror=unused-but-set-variable
+                      -Werror=return-type -Werror=shadow -Werror=format)
+endif()
 
 if(WIN32)
   add_compile_definitions(
@@ -14,7 +16,7 @@ if(WIN32)
     WIN32_LEAN_AND_MEAN
   )
   # set the same behavior for windows as it is on linux
-  export_windows_symbols()
+  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
 
 set(THIS_PACKAGE_INCLUDE_DEPENDS
@@ -128,6 +130,7 @@ pluginlib_export_plugin_description_file(filters control_filters.xml)
 ##########
 if(BUILD_TESTING)
   find_package(ament_cmake_gmock REQUIRED)
+  find_package(ament_cmake_gtest REQUIRED)
   find_package(rclcpp_lifecycle REQUIRED)
 
   ament_add_gmock(pid_tests test/pid_tests.cpp)
@@ -136,12 +139,12 @@ if(BUILD_TESTING)
   ament_add_gmock(rate_limiter_tests test/rate_limiter.cpp)
   target_link_libraries(rate_limiter_tests control_toolbox)
 
-  ament_add_gmock(pid_ros_parameters_tests test/pid_ros_parameters_tests.cpp)
-  target_link_libraries(pid_ros_parameters_tests control_toolbox)
+  ament_add_gtest(pid_parameters_tests test/pid_parameters_tests.cpp)
+  target_link_libraries(pid_parameters_tests control_toolbox)
 
-  ament_add_gmock(pid_ros_publisher_tests test/pid_ros_publisher_tests.cpp)
-  target_link_libraries(pid_ros_publisher_tests control_toolbox)
-  ament_target_dependencies(pid_ros_publisher_tests rclcpp_lifecycle)
+  ament_add_gtest(pid_publisher_tests test/pid_publisher_tests.cpp)
+  target_link_libraries(pid_publisher_tests control_toolbox)
+  ament_target_dependencies(pid_publisher_tests rclcpp_lifecycle)
 
   ## Control Filters
   # exponential_filter
