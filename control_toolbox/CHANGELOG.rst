@@ -2,18 +2,32 @@
 Changelog for package control_toolbox
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-4.2.0 (2025-04-19)
+5.2.0 (2025-04-19)
 ------------------
-* Fix clang-format (backport `#327 <https://github.com/ros-controls/control_toolbox/issues/327>`_) (`#336 <https://github.com/ros-controls/control_toolbox/issues/336>`_)
-* Add gravity compensation filter (`#153 <https://github.com/ros-controls/control_toolbox/issues/153>`_) (`#334 <https://github.com/ros-controls/control_toolbox/issues/334>`_)
-* Contributors: Christoph Fröhlich, Daniel Zumkeller, Denis Štogl, GuiHome
+* Fix clang-format (`#327 <https://github.com/ros-controls/control_toolbox/issues/327>`_)
+* Add gravity compensation filter (`#153 <https://github.com/ros-controls/control_toolbox/issues/153>`_)
+* Contributors: Christoph Fröhlich, GuiHome, Daniel Zumkeller, Denis Štogl
 
-4.1.0 (2025-04-06)
+5.1.0 (2025-04-06)
 ------------------
-* Move the package to a subfolder (backport `#318 <https://github.com/ros-controls/control_toolbox/issues/318>`_) (`#329 <https://github.com/ros-controls/control_toolbox/issues/329>`_)
-* Use global cmake macros (backport `#316 <https://github.com/ros-controls/control_toolbox/issues/316>`_) (`#317 <https://github.com/ros-controls/control_toolbox/issues/317>`_)
-* Replaced gMock instead of gTest (backport `#300 <https://github.com/ros-controls/control_toolbox/issues/300>`_) (`#315 <https://github.com/ros-controls/control_toolbox/issues/315>`_)
-* Contributors: mergify[bot]
+* Remove unused class variables (`#328 <https://github.com/ros-controls/control_toolbox/issues/328>`_)
+* Don't update internal states if called with dt=0 or garbage (`#326 <https://github.com/ros-controls/control_toolbox/issues/326>`_)
+* Move the package to a subfolder (`#318 <https://github.com/ros-controls/control_toolbox/issues/318>`_)
+* Contributors: Christoph Fröhlich
+
+5.0.0 (2025-03-13)
+------------------
+* Replaced gMock instead of gTest (`#300 <https://github.com/ros-controls/control_toolbox/issues/300>`_)
+* Update downstream repository branches for humble (`#312 <https://github.com/ros-controls/control_toolbox/issues/312>`_)
+* Update upstream/downstream repository branches (`#309 <https://github.com/ros-controls/control_toolbox/issues/309>`_)
+* Make downstream job a semi-binary build (`#301 <https://github.com/ros-controls/control_toolbox/issues/301>`_)
+* Cleanup duplicate entries in the msg definition (`#299 <https://github.com/ros-controls/control_toolbox/issues/299>`_)
+* [Pid] Save `i_term` instead of error integral (`#294 <https://github.com/ros-controls/control_toolbox/issues/294>`_)
+* Fix mergify config (`#296 <https://github.com/ros-controls/control_toolbox/issues/296>`_)
+* [Pid] Remove deprecated variables and methods (`#293 <https://github.com/ros-controls/control_toolbox/issues/293>`_)
+* Change workflows and readme for jazzy branch (`#292 <https://github.com/ros-controls/control_toolbox/issues/292>`_)
+* Bump version of pre-commit hooks (`#288 <https://github.com/ros-controls/control_toolbox/issues/288>`_)
+* Contributors: Aditya Pawar, Christoph Fröhlich, github-actions[bot]
 
 4.0.1 (2025-02-13)
 ------------------

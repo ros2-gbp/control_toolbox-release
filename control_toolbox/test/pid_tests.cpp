@@ -117,6 +117,7 @@ TEST(ParameterTest, integrationClampZeroGainTest)
   EXPECT_EQ(0.0, cmd);
 }
 
+constexpr double EPS = 1e-9;
 TEST(ParameterTest, integrationAntiwindupTest)
 {
   RecordProperty(
@@ -131,16 +132,16 @@ TEST(ParameterTest, integrationAntiwindupTest)
   double cmd = 0.0;
 
   cmd = pid.compute_command(-1.0, 1.0);
-  EXPECT_EQ(-1.0, cmd);
+  EXPECT_NEAR(-1.0, cmd, EPS);
 
   cmd = pid.compute_command(-1.0, 1.0);
-  EXPECT_EQ(-1.0, cmd);
+  EXPECT_NEAR(-1.0, cmd, EPS);
 
   cmd = pid.compute_command(0.5, 1.0);
-  EXPECT_EQ(0.0, cmd);
+  EXPECT_NEAR(0.0, cmd, EPS);
 
   cmd = pid.compute_command(-1.0, 1.0);
-  EXPECT_EQ(-1.0, cmd);
+  EXPECT_NEAR(-1.0, cmd, EPS);
 }
 
 TEST(ParameterTest, negativeIntegrationAntiwindupTest)
@@ -157,16 +158,16 @@ TEST(ParameterTest, negativeIntegrationAntiwindupTest)
   double cmd = 0.0;
 
   cmd = pid.compute_command(0.1, 1.0);
-  EXPECT_EQ(-0.2, cmd);
+  EXPECT_NEAR(-0.2, cmd, EPS);
 
   cmd = pid.compute_command(0.1, 1.0);
-  EXPECT_EQ(-0.2, cmd);
+  EXPECT_NEAR(-0.2, cmd, EPS);
 
   cmd = pid.compute_command(-0.05, 1.0);
-  EXPECT_EQ(-0.075, cmd);
+  EXPECT_NEAR(-0.075, cmd, EPS);
 
   cmd = pid.compute_command(0.1, 1.0);
-  EXPECT_EQ(-0.2, cmd);
+  EXPECT_NEAR(-0.2, cmd, EPS);
 }
 
 TEST(ParameterTest, gainSettingCopyPIDTest)
@@ -442,34 +443,6 @@ TEST(CommandTest, completePIDTest)
   EXPECT_EQ(-3.5, cmd);
 }
 
-TEST(CommandTest, compatibilityTest)
-{
-  RecordProperty("description", "Tests deprecated methods.");
-
-// Disable deprecated warnings
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-
-  Pid pid;
-  Pid pid_old;
-  pid.initialize(1.0, 1.0, 1.0, 5.0, -5.0);
-  pid_old.initPid(1.0, 1.0, 1.0, 5.0, -5.0);
-
-  auto cmd1 = pid.compute_command(-0.5, 1.0);
-  auto cmd2 = pid_old.computeCommand(-0.5, static_cast<uint64_t>(1.0 * 1e9));
-  EXPECT_EQ(cmd1, cmd2);
-
-  pid.set_gains(2.0, 1.0, 1.0, 5.0, -5.0);
-  pid_old.setGains(2.0, 1.0, 1.0, 5.0, -5.0);
-
-  cmd1 = pid.compute_command(-0.5, 1.0);
-  cmd2 = pid_old.computeCommand(-0.5, static_cast<uint64_t>(1.0 * 1e9));
-  EXPECT_EQ(cmd1, cmd2);
-
-// Re-enable deprecated warnings
-#pragma GCC diagnostic pop
-}
-
 TEST(CommandTest, timeArgumentTest)
 {
   RecordProperty("description", "Tests different dt argument type methods.");
@@ -510,6 +483,29 @@ TEST(CommandTest, timeArgumentTest)
   EXPECT_EQ(cmd1, cmd2);
   EXPECT_EQ(cmd1, cmd3);
   EXPECT_EQ(cmd1, cmd4);
+
+  // call with dt=0, nothing should change
+  double pe, ie1, de, ie2;
+  pid1.get_current_pid_errors(pe, ie1, de);
+  cmd1 = pid1.compute_command(-0.5, 0.0, 0.0);
+  pid1.get_current_pid_errors(pe, ie2, de);
+  EXPECT_EQ(-2.0, cmd1);
+  EXPECT_EQ(ie1, ie2);
+  // should throw if called with negative dt
+  EXPECT_THROW(cmd1 = pid1.compute_command(-0.5, 0.0, -1.0), std::invalid_argument);
+  // call with nan, should return NaN but not reset internal states
+  cmd1 = pid1.compute_command(std::numeric_limits<double>::quiet_NaN(), 0.0, 1.0);
+  cmd3 = pid1.get_current_cmd();
+  EXPECT_FALSE(std::isfinite(cmd1));
+  EXPECT_FALSE(std::isfinite(cmd3));
+  pid1.get_current_pid_errors(pe, ie2, de);
+  EXPECT_EQ(ie1, ie2);
+  cmd2 = pid2.compute_command(-0.5, std::numeric_limits<double>::quiet_NaN(), 1.0);
+  cmd4 = pid2.get_current_cmd();
+  EXPECT_FALSE(std::isfinite(cmd2));
+  EXPECT_FALSE(std::isfinite(cmd4));
+  pid1.get_current_pid_errors(pe, ie2, de);
+  EXPECT_EQ(ie1, ie2);
 }
 
 int main(int argc, char ** argv)
