@@ -2,6 +2,17 @@
 Changelog for package control_toolbox
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+5.3.1 (2025-04-25)
+------------------
+* Minor filter fixes + clang-format rules update (`#347 <https://github.com/ros-controls/control_toolbox/issues/347>`_)
+* Cleanup removed msg fields (`#346 <https://github.com/ros-controls/control_toolbox/issues/346>`_)
+* Contributors: Christoph Fröhlich, Sai Kishor Kothakota
+
+5.3.0 (2025-04-24)
+------------------
+* Add std::vector<double> option to the low pass filter (`#340 <https://github.com/ros-controls/control_toolbox/issues/340>`_)
+* Contributors: Marq Rasmussen
+
 5.2.0 (2025-04-19)
 ------------------
 * Fix clang-format (`#327 <https://github.com/ros-controls/control_toolbox/issues/327>`_)
