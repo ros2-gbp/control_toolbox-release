@@ -1,3 +1,26 @@
+## control_toolbox (jazzy) - 4.4.0-1
+
+The packages in the `control_toolbox` repository were released into the `jazzy` distro by running `/usr/bin/bloom-release --ros-distro jazzy control_toolbox` on `Fri, 23 May 2025 17:32:57 -0000`
+
+The `control_toolbox` package was released.
+
+Version of package(s) in repository `control_toolbox`:
+
+- upstream repository: https://github.com/ros-controls/control_toolbox.git
+- release repository: https://github.com/ros2-gbp/control_toolbox-release.git
+- rosdistro version: `4.3.0-1`
+- old version: `4.3.0-1`
+- new version: `4.4.0-1`
+
+Versions of tools used:
+
+- bloom version: `0.12.0`
+- catkin_pkg version: `1.0.0`
+- rosdep version: `0.25.1`
+- rosdistro version: `1.0.1`
+- vcstools version: `0.1.42`
+
+
 ## control_toolbox (kilted) - 5.4.0-1
 
 The packages in the `control_toolbox` repository were released into the `kilted` distro by running `/usr/bin/bloom-release --ros-distro kilted control_toolbox` on `Fri, 23 May 2025 17:30:11 -0000`
