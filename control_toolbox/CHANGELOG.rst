@@ -2,6 +2,17 @@
 Changelog for package control_toolbox
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+5.4.0 (2025-05-23)
+------------------
+* Update deprecated call to ament_target_dependencies (`#364 <https://github.com/ros-controls/control_toolbox/issues/364>`_)
+* Make member variables of LowPassFilter class generic (`#351 <https://github.com/ros-controls/control_toolbox/issues/351>`_)
+* Contributors: David V. Lu!!, Pedro de Azeredo
+
+5.3.2 (2025-05-05)
+------------------
+* fix deprecated tf2 header (`#361 <https://github.com/ros-controls/control_toolbox/issues/361>`_)
+* Contributors: Bence Magyar
+
 5.3.1 (2025-04-25)
 ------------------
 * Minor filter fixes + clang-format rules update (`#347 <https://github.com/ros-controls/control_toolbox/issues/347>`_)
