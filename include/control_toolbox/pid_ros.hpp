@@ -92,14 +92,16 @@ public:
    * \param d The derivative gain.
    * \param i_max Upper integral clamp.
    * \param i_min Lower integral clamp.
-   * \param antiwindup Antiwindup functionality. When set to true, limits
+   * \param antiwindup Anti-windup functionality. When set to true, limits
         the integral error to prevent windup; otherwise, constrains the
         integral contribution to the control output. i_max and
         i_min are applied in both scenarios.
+   * \return True if all parameters are successfully set, False otherwise.
    *
    * \note New gains are not applied if i_min_ > i_max_
    */
-  void initialize_from_args(
+  [[deprecated("Use initialize_from_args with AntiWindupStrategy instead.")]]
+  bool initialize_from_args(
     double p, double i, double d, double i_max, double i_min, bool antiwindup);
 
   /*!
@@ -125,12 +127,17 @@ public:
    * \param d The derivative gain.
    * \param i_max The max integral windup.
    * \param i_min The min integral windup.
-   * \param antiwindup antiwindup.
+   * \param antiwindup Anti-windup functionality. When set to true, limits
+        the integral error to prevent windup; otherwise, constrains the
+        integral contribution to the control output. i_max and
+        i_min are applied in both scenarios.
    * \param save_i_term save integrator output between resets.
+   * \return True if all parameters are successfully set, False otherwise.
    *
    * \note New gains are not applied if i_min_ > i_max_
    */
-  void initialize_from_args(
+  [[deprecated("Use initialize_from_args with AntiWindupStrategy instead.")]]
+  bool initialize_from_args(
     double p, double i, double d, double i_max, double i_min, bool antiwindup, bool save_i_term);
 
   /*!
@@ -149,8 +156,29 @@ public:
     double p, double i, double d, double i_max, double i_min, bool antiwindup, bool save_i_term);
 
   /*!
+   * \brief Initialize the PID controller and set the parameters.
+   *
+   * \param p The proportional gain.
+   * \param i The integral gain.
+   * \param d The derivative gain.
+   * \param u_max Upper output clamp.
+   * \param u_min Lower output clamp.
+   * \param antiwindup_strat Specifies the anti-windup strategy. Options: 'back_calculation',
+        'conditional_integration', or 'none'. Note that the 'back_calculation' strategy use the
+        tracking_time_constant parameter to tune the anti-windup behavior.
+   * \param save_i_term save integrator output between resets.
+   * \return True if all parameters are successfully set, False otherwise.
+   *
+   * \note New gains are not applied if u_min_ > u_max_.
+   */
+  bool initialize_from_args(
+    double p, double i, double d, double u_max, double u_min,
+    const AntiWindupStrategy & antiwindup_strat, bool save_i_term);
+
+  /*!
    * \brief Initialize the PID controller based on already set parameters
-   * \return True if all parameters are set (p, i, d, i_min and i_max), False otherwise
+   * \return True if all parameters are set (p, i, d, i_max, i_min, u_max, u_min), False otherwise
+   * \return False if the parameters are not set or if the parameters are invalid
    */
   bool initialize_from_ros_parameters();
 
@@ -229,6 +257,8 @@ public:
   /*!
    * \brief Get PID gains for the controller.
    * \return gains A struct of the PID gain values
+   *
+   * \note This method is not RT safe
    */
   Pid::Gains get_gains();
 
@@ -249,10 +279,33 @@ public:
         the integral error to prevent windup; otherwise, constrains the
         integral contribution to the control output. i_max and
         i_min are applied in both scenarios.
+   * \return True if all parameters are successfully set, False otherwise.
    *
    * \note New gains are not applied if i_min > i_max
+   * \note This method is not RT safe
    */
-  void set_gains(double p, double i, double d, double i_max, double i_min, bool antiwindup = false);
+  [[deprecated("Use set_gains with AntiWindupStrategy instead.")]]
+  bool set_gains(double p, double i, double d, double i_max, double i_min, bool antiwindup = false);
+
+  /*!
+   * \brief Set PID gains for the controller (preferred).
+   *
+   * \param p The proportional gain.
+   * \param i The integral gain.
+   * \param d The derivative gain.
+   * \param u_max Upper output clamp.
+   * \param u_min Lower output clamp.
+   * \param antiwindup_strat Specifies the anti-windup strategy. Options: 'back_calculation',
+        'conditional_integration', or 'none'. Note that the 'back_calculation' strategy use the
+        tracking_time_constant parameter to tune the anti-windup behavior.
+   * \return True if all parameters are successfully set, False otherwise.
+   *
+   * \note New gains are not applied if u_min_ > u_max_.
+   * \note This method is not RT safe
+   */
+  bool set_gains(
+    double p, double i, double d, double u_max, double u_min,
+    const AntiWindupStrategy & antiwindup_strat);
 
   /*!
    * \brief Set PID gains for the controller.
@@ -274,10 +327,12 @@ public:
   /*!
    * \brief Set PID gains for the controller.
    * \param gains A struct of the PID gain values
+   * \return True if all parameters are successfully set, False otherwise.
    *
    * \note New gains are not applied if gains.i_min_ > gains.i_max_
+   * \note This method is not RT safe
    */
-  void set_gains(const Pid::Gains & gains);
+  bool set_gains(const Pid::Gains & gains);
 
   /*!
    * \brief Set PID gains for the controller.
@@ -327,7 +382,7 @@ public:
   /*!
    * \brief Return PID error terms for the controller.
    * \param pe[out] The proportional error.
-   * \param ie[out] The integral error.
+   * \param ie[out] The weighted integral error.
    * \param de[out] The derivative error.
    */
   void get_current_pid_errors(double & pe, double & ie, double & de);
@@ -409,6 +464,8 @@ private:
 
   bool get_boolean_param(const std::string & param_name, bool & value);
 
+  bool get_string_param(const std::string & param_name, std::string & value);
+
   /*!
    * \brief Set prefix for topic and parameter names
    * \param[in] topic_prefix prefix to add to the pid parameters.
@@ -426,6 +483,7 @@ private:
   rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr topics_interface_;
 
   std::shared_ptr<realtime_tools::RealtimePublisher<control_msgs::msg::PidState>> rt_state_pub_;
+  control_msgs::msg::PidState pid_state_msg_;
   std::shared_ptr<rclcpp::Publisher<control_msgs::msg::PidState>> state_pub_;
 
   Pid pid_;
