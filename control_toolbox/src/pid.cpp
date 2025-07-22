@@ -39,14 +39,10 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
-#include <limits>
 #include <stdexcept>
 
 #include "control_toolbox/pid.hpp"
 
-// Disable deprecated warnings
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 namespace control_toolbox
 {
 constexpr double UMAX_INFINITY = std::numeric_limits<double>::infinity();
@@ -100,9 +96,6 @@ Pid::Pid(const Pid & source)
   // Reset the state of this PID controller
   reset();
 }
-
-// Enable deprecated warnings again
-#pragma GCC diagnostic pop
 
 Pid::~Pid() {}
 
@@ -237,7 +230,7 @@ bool Pid::set_gains(const Gains & gains_in)
   std::string error_msg = "";
   if (!gains_in.validate(error_msg))
   {
-    std::cerr << "PID: Invalid gains: " << error_msg << ". SKipping new gains." << std::endl;
+    std::cerr << "PID: Invalid gains: " << error_msg << ". Skipping new gains." << std::endl;
     return false;
   }
   else
@@ -279,8 +272,8 @@ double Pid::compute_command(double error, const double & dt_s)
   // don't reset controller but return NaN
   if (!std::isfinite(error))
   {
-    std::cout << "Received a non-finite error value\n";
-    return cmd_ = std::numeric_limits<double>::quiet_NaN();
+    std::cerr << "Received a non-finite error value\n";
+    return cmd_ = std::numeric_limits<float>::quiet_NaN();
   }
 
   // Calculate the derivative error
@@ -324,7 +317,7 @@ double Pid::compute_command(double error, double error_dot, const double & dt_s)
 {
   if (is_zero(dt_s))
   {
-    // don't update anything
+    // Don't update anything
     return cmd_;
   }
   else if (dt_s < 0.0)
@@ -342,7 +335,7 @@ double Pid::compute_command(double error, double error_dot, const double & dt_s)
   p_error_ = error;      // This is error = target - state
   d_error_ = error_dot;  // This is the derivative of error
 
-  // don't reset controller but return NaN
+  // Don't reset controller but return NaN
   if (!std::isfinite(error) || !std::isfinite(error_dot))
   {
     std::cerr << "Received a non-finite error/error_dot value\n";
@@ -424,6 +417,11 @@ double Pid::compute_command(double error, double error_dot, const double & dt_s)
         i_term_ += dt_s * gains_.i_gain_ * error;
       }
     }
+    else if (gains_.antiwindup_strat_.type == AntiWindupStrategy::NONE)
+    {
+      // No anti-windup strategy, so just integrate the error
+      i_term_ += dt_s * gains_.i_gain_ * error;
+    }
   }
 
   return cmd_;
@@ -439,63 +437,5 @@ void Pid::get_current_pid_errors(double & pe, double & ie, double & de)
   ie = i_term_;
   de = d_error_;
 }
-
-// TODO(christophfroehlich): Remove deprecated functions
-// BEGIN DEPRECATED
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-double Pid::computeCommand(double error, uint64_t dt)
-{
-  return compute_command(error, static_cast<double>(dt) / 1.e9);
-}
-
-[[nodiscard]] double Pid::computeCommand(double error, double error_dot, uint64_t dt)
-{
-  return compute_command(error, error_dot, static_cast<double>(dt) / 1.e9);
-}
-
-void Pid::setCurrentCmd(double cmd) { set_current_cmd(cmd); }
-
-double Pid::getCurrentCmd() { return get_current_cmd(); }
-
-double Pid::getDerivativeError()
-{
-  double pe, ie, de;
-  get_current_pid_errors(pe, ie, de);
-  return de;
-}
-
-void Pid::getCurrentPIDErrors(double & pe, double & ie, double & de)
-{
-  get_current_pid_errors(pe, ie, de);
-}
-
-void Pid::initPid(double p, double i, double d, double i_max, double i_min, bool antiwindup)
-{
-  initialize(p, i, d, i_max, i_min, antiwindup);
-}
-
-void Pid::getGains(double & p, double & i, double & d, double & i_max, double & i_min)
-{
-  get_gains(p, i, d, i_max, i_min);
-}
-
-void Pid::getGains(
-  double & p, double & i, double & d, double & i_max, double & i_min, bool & antiwindup)
-{
-  get_gains(p, i, d, i_max, i_min, antiwindup);
-}
-
-Pid::Gains Pid::getGains() { return get_gains(); }
-
-void Pid::setGains(double p, double i, double d, double i_max, double i_min, bool antiwindup)
-{
-  set_gains(p, i, d, i_max, i_min, antiwindup);
-}
-
-void Pid::setGains(const Pid::Gains & gains) { set_gains(gains); }
-
-#pragma GCC diagnostic pop
-// END DEPRECATED
 
 }  // namespace control_toolbox

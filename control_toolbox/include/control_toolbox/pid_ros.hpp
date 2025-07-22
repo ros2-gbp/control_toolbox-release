@@ -68,7 +68,7 @@ public:
    *
    */
   template <class NodeT>
-  explicit PidROS(
+  [[deprecated("Use overloads with explicit prefixes for params and topics")]] explicit PidROS(
     std::shared_ptr<NodeT> node_ptr, std::string prefix = std::string(""),
     bool prefix_is_for_params = false)
   : PidROS(
@@ -77,8 +77,59 @@ public:
       prefix_is_for_params)
   {
   }
+  template <class NodeT>
+  explicit PidROS(std::shared_ptr<NodeT> node_ptr, const std::string & param_prefix)
+  : PidROS(
+      node_ptr->get_node_base_interface(), node_ptr->get_node_logging_interface(),
+      node_ptr->get_node_parameters_interface(), node_ptr->get_node_topics_interface(),
+      param_prefix, "", false)
+  {
+  }
+  /*!
+   * \brief Constructor of PidROS class.
+   *
+   * The node is passed to this class to handler the ROS parameters, this class allows
+   * to add a prefix to the pid parameters
+   *
+   * \param node Any ROS node
+   * \param param_prefix prefix to add to the pid parameters.
+   * \param topic_prefix prefix to add to the state publisher. If it starts with `~/`, topic will be local under the namespace of the node. If it starts with `/` or an alphanumeric character, topic will be in global namespace.
+   *
+   */
+  template <class NodeT>
+  explicit PidROS(
+    std::shared_ptr<NodeT> node_ptr, const std::string & param_prefix,
+    const std::string & topic_prefix)
+  : PidROS(
+      node_ptr->get_node_base_interface(), node_ptr->get_node_logging_interface(),
+      node_ptr->get_node_parameters_interface(), node_ptr->get_node_topics_interface(),
+      param_prefix, topic_prefix, true)
+  {
+  }
+  /*!
+   * \brief Constructor of PidROS class.
+   *
+   * The node is passed to this class to handler the ROS parameters, this class allows
+   * to add a prefix to the pid parameters
+   *
+   * \param node Any ROS node
+   * \param param_prefix prefix to add to the pid parameters.
+   * \param topic_prefix prefix to add to the state publisher. If it starts with `~/`, topic will be local under the namespace of the node. If it starts with `/` or an alphanumeric character, topic will be in global namespace.
+   * \param activate_state_publisher If true, the publisher will be enabled after initialization.
+   *
+   */
+  template <class NodeT>
+  explicit PidROS(
+    std::shared_ptr<NodeT> node_ptr, std::string param_prefix, std::string topic_prefix,
+    bool activate_state_publisher)
+  : PidROS(
+      node_ptr->get_node_base_interface(), node_ptr->get_node_logging_interface(),
+      node_ptr->get_node_parameters_interface(), node_ptr->get_node_topics_interface(),
+      param_prefix, topic_prefix, activate_state_publisher)
+  {
+  }
 
-  PidROS(
+  [[deprecated("Use overloads with explicit prefixes for params and topics")]] PidROS(
     rclcpp::node_interfaces::NodeBaseInterface::SharedPtr node_base,
     rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr node_logging,
     rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_params,
@@ -86,6 +137,25 @@ public:
     std::string prefix = std::string(""), bool prefix_is_for_params = false);
 
   /*!
+   * \brief Constructor of PidROS class with node_interfaces
+   *
+   * \param node_base Node base interface pointer.
+   * \param node_logging Node logging interface pointer.
+   * \param node_params Node parameters interface pointer.
+   * \param topics_interface Node topics interface pointer.
+   * \param param_prefix Prefix to add to the PID parameters. This string is not manipulated, i.e., probably should end with `.`.
+   * \param topic_prefix Prefix to add to the state publisher. This string is not manipulated, i.e., probably should end with `/`. If it starts with `~/`, topic will be local under the namespace of the node. If it starts with `/` or an alphanumeric character, topic will be in global namespace.
+   * \param activate_state_publisher If true, the publisher will be enabled after initialization.
+   */
+  PidROS(
+    rclcpp::node_interfaces::NodeBaseInterface::SharedPtr node_base,
+    rclcpp::node_interfaces::NodeLoggingInterface::SharedPtr node_logging,
+    rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_params,
+    rclcpp::node_interfaces::NodeTopicsInterface::SharedPtr topics_interface,
+    const std::string & param_prefix, const std::string & topic_prefix,
+    bool activate_state_publisher);
+
+  /*!
    * \brief Initialize the PID controller and set the parameters
    * \param p The proportional gain.
    * \param i The integral gain.
@@ -109,22 +179,6 @@ public:
    * \param p The proportional gain.
    * \param i The integral gain.
    * \param d The derivative gain.
-   * \param i_max Upper integral clamp.
-   * \param i_min Lower integral clamp.
-   * \param antiwindup Antiwindup functionality. When set to true, limits
-        the integral error to prevent windup; otherwise, constrains the
-        integral contribution to the control output. i_max and
-        i_min are applied in both scenarios.
-   * \note New gains are not applied if i_min_ > i_max_
-   */
-  [[deprecated("Use initialize_from_args() instead")]] void initPid(
-    double p, double i, double d, double i_max, double i_min, bool antiwindup);
-
-  /*!
-   * \brief Initialize the PID controller and set the parameters
-   * \param p The proportional gain.
-   * \param i The integral gain.
-   * \param d The derivative gain.
    * \param i_max The max integral windup.
    * \param i_min The min integral windup.
    * \param antiwindup Anti-windup functionality. When set to true, limits
@@ -138,21 +192,6 @@ public:
    */
   [[deprecated("Use initialize_from_args with AntiWindupStrategy instead.")]]
   bool initialize_from_args(
-    double p, double i, double d, double i_max, double i_min, bool antiwindup, bool save_i_term);
-
-  /*!
-   * \brief Initialize the PID controller and set the parameters
-   * \param p The proportional gain.
-   * \param i The integral gain.
-   * \param d The derivative gain.
-   * \param i_max The max integral windup.
-   * \param i_min The min integral windup.
-   * \param antiwindup antiwindup.
-   * \param save_i_term save integrator output between resets.
-   *
-   * \note New gains are not applied if i_min_ > i_max_
-   */
-  [[deprecated("Use initialize_from_args() instead")]] void initPid(
     double p, double i, double d, double i_max, double i_min, bool antiwindup, bool save_i_term);
 
   /*!
@@ -183,12 +222,6 @@ public:
   bool initialize_from_ros_parameters();
 
   /*!
-   * \brief Initialize the PID controller based on already set parameters
-   * \return True if all parameters are set (p, i, d, i_min and i_max), False otherwise
-   */
-  [[deprecated("Use initialize_from_ros_parameters() instead")]] bool initPid();
-
-  /*!
    * \brief Reset the state of this PID controller
    *
    * @note save_i_term parameter is read from ROS parameters
@@ -215,19 +248,6 @@ public:
   double compute_command(double error, const rclcpp::Duration & dt);
 
   /*!
-   * \brief Set the PID error and compute the PID command with nonuniform time
-   * step size. The derivative error is computed from the change in the error
-   * and the timestep \c dt.
-   *
-   * \param error  Error since last call (error = target - state)
-   * \param dt Change in time since last call in seconds
-   *
-   * \returns PID command
-   */
-  [[deprecated("Use compute_command() instead")]] double computeCommand(
-    double error, rclcpp::Duration dt);
-
-  /*!
    * \brief Set the PID error and compute the PID command with nonuniform
    * time step size. This also allows the user to pass in a precomputed
    * derivative error.
@@ -241,32 +261,12 @@ public:
   double compute_command(double error, double error_dot, const rclcpp::Duration & dt);
 
   /*!
-   * \brief Set the PID error and compute the PID command with nonuniform
-   * time step size. This also allows the user to pass in a precomputed
-   * derivative error.
-   *
-   * \param error Error since last call (error = target - state)
-   * \param error_dot d(Error)/dt since last call
-   * \param dt Change in time since last call in seconds
-   *
-   * \returns PID command
-   */
-  [[deprecated("Use compute_command() instead")]] double computeCommand(
-    double error, double error_dot, rclcpp::Duration dt);
-
-  /*!
    * \brief Get PID gains for the controller.
    * \return gains A struct of the PID gain values
    *
    * \note This method is not RT safe
    */
   Pid::Gains get_gains();
-
-  /*!
-   * \brief Get PID gains for the controller.
-   * \return gains A struct of the PID gain values
-   */
-  [[deprecated("Use get_gains() instead")]] Pid::Gains getGains();
 
   /*!
    * \brief Set PID gains for the controller.
@@ -309,23 +309,6 @@ public:
 
   /*!
    * \brief Set PID gains for the controller.
-   * \param p The proportional gain.
-   * \param i The integral gain.
-   * \param d The derivative gain.
-   * \param i_max Upper integral clamp.
-   * \param i_min Lower integral clamp.
-   * \param antiwindup Antiwindup functionality. When set to true, limits
-        the integral error to prevent windup; otherwise, constrains the
-        integral contribution to the control output. i_max and
-        i_min are applied in both scenarios.
-   *
-   * \note New gains are not applied if i_min > i_max
-   */
-  [[deprecated("Use set_gains() instead")]] void setGains(
-    double p, double i, double d, double i_max, double i_min, bool antiwindup = false);
-
-  /*!
-   * \brief Set PID gains for the controller.
    * \param gains A struct of the PID gain values
    * \return True if all parameters are successfully set, False otherwise.
    *
@@ -335,24 +318,10 @@ public:
   bool set_gains(const Pid::Gains & gains);
 
   /*!
-   * \brief Set PID gains for the controller.
-   * \param gains A struct of the PID gain values
-   *
-   * \note New gains are not applied if gains.i_min_ > gains.i_max_
-   */
-  [[deprecated("Use set_gains() instead")]] void setGains(const Pid::Gains & gains);
-
-  /*!
    * \brief Set current command for this PID controller
    * \param cmd command to set
    */
   void set_current_cmd(double cmd);
-
-  /*!
-   * \brief Set current command for this PID controller
-   * \param cmd command to set
-   */
-  [[deprecated("Use set_current_cmd() instead")]] void setCurrentCmd(double cmd);
 
   /*!
    * \brief Return current command for this PID controller
@@ -361,23 +330,10 @@ public:
   double get_current_cmd();
 
   /*!
-   * \brief Return current command for this PID controller
-   * \return current cmd
-   */
-  [[deprecated("Use get_current_cmd() instead")]] double getCurrentCmd();
-
-  /*!
    * \brief Return PID state publisher
    * \return shared_ptr to the PID state publisher
    */
   std::shared_ptr<rclcpp::Publisher<control_msgs::msg::PidState>> get_pid_state_publisher();
-
-  /*!
-   * \brief Return PID state publisher
-   * \return shared_ptr to the PID state publisher
-   */
-  [[deprecated("Use get_pid_state_publisher() instead")]]
-  std::shared_ptr<rclcpp::Publisher<control_msgs::msg::PidState>> getPidStatePublisher();
 
   /*!
    * \brief Return PID error terms for the controller.
@@ -388,23 +344,9 @@ public:
   void get_current_pid_errors(double & pe, double & ie, double & de);
 
   /*!
-   * \brief Return PID error terms for the controller.
-   * \param pe[out] The proportional error.
-   * \param ie[out] The integral error.
-   * \param de[out] The derivative error.
-   */
-  [[deprecated("Use get_current_pid_errors() instead")]] void getCurrentPIDErrors(
-    double & pe, double & ie, double & de);
-
-  /*!
    * \brief Print to console the current parameters
    */
   void print_values();
-
-  /*!
-   * \brief Print to console the current parameters
-   */
-  [[deprecated("Use print_values() instead")]] void printValues();
 
   /*!
    * \brief Return PID parameters callback handle
@@ -416,44 +358,11 @@ public:
     return parameter_callback_;
   }
 
-  /*!
-   * \brief Return PID parameters callback handle
-   * \return shared_ptr to the PID parameters callback handle
-   */
-  [[deprecated("Use get_parameters_callback_handle() instead")]]
-  inline rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr
-  getParametersCallbackHandle()
-  {
-    return get_parameters_callback_handle();
-  }
-
 protected:
   std::string topic_prefix_;
   std::string param_prefix_;
 
 private:
-  // DEPRECATION START
-  // this was added to avoid ABI breaks
-  [[deprecated]] void setParameterEventCallback();
-
-  [[deprecated]] void publishPIDState(double cmd, double error, rclcpp::Duration dt);
-
-  [[deprecated]] void declareParam(
-    const std::string & param_name, rclcpp::ParameterValue param_value);
-
-  [[deprecated]] bool getDoubleParam(const std::string & param_name, double & value);
-
-  [[deprecated]] bool getBooleanParam(const std::string & param_name, bool & value);
-
-  /*!
-   * \param topic_prefix prefix to add to the pid parameters.
-   *               Per default is prefix interpreted as prefix for topics.
-   *               If not stated explicitly using "/" or "~", prefix is interpreted as global, i.e.,
-   *               "/" will be added in front of topic prefix
-   */
-  [[deprecated]] void initialize(std::string topic_prefix);
-  // DEPRECATED END
-
   void set_parameter_event_callback();
 
   void publish_pid_state(double cmd, double error, rclcpp::Duration dt);
@@ -473,7 +382,7 @@ private:
    *               If not stated explicitly using "/" or "~", prefix is interpreted as global, i.e.,
    *               "/" will be added in front of topic prefix
    */
-  void set_prefixes(const std::string & topic_prefix);
+  [[deprecated]] void set_prefixes(const std::string & topic_prefix);
 
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_;
 

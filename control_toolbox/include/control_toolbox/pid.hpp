@@ -143,7 +143,7 @@ public:
           "{})",
           i_min, i_max));
     }
-    if (std::isfinite(i_min) || std::isfinite(i_max))
+    if (type != LEGACY && (std::isfinite(i_min) || std::isfinite(i_max)))
     {
       std::cout << "Warning: The i_min and i_max are only valid for the deprecated LEGACY "
                    "antiwindup strategy. Please use the AntiWindupStrategy::set_type() method to "
@@ -202,69 +202,78 @@ inline bool is_zero(T value, T tolerance = std::numeric_limits<T>::epsilon())
 }
 
 /***************************************************/
-/*! \class Pid
-  \brief A basic pid class.
+/*!
+  \class Pid
+  \brief Generic Proportional–Integral–Derivative (PID) controller.
 
-  This class implements a generic structure that
-  can be used to create a wide range of pid
-  controllers. It can function independently or
-  be subclassed to provide more specific controls
-  based on a particular control loop.
+  \details
+  The PID (Proportional–Integral–Derivative) controller is a widely used feedback
+  controller. This class implements a generic structure that can be used to create
+  a wide range of PID controllers. It can function independently or be subclassed
+  to provide more specific control loops. Integral retention on reset is supported,
+  which prevents re-winding the integrator after temporary disabling in presence
+  of constant disturbances.
 
-  This class also allows for retention of integral
-  term on reset.  This is useful for control loops
-  that are enabled/disabled with a constant steady-state
-  external disturbance.  Once the integrator cancels
-  out the external disturbance, disabling/resetting/
-  re-enabling closed-loop control does not require
-  the integrator to wind up again.
+  \section pid_equation PID Equation
+  The standard PID equation is:
+  \f[
+    command = p\_term + i\_term + d\_term
+  \f]
+  where:
+  - \f$ p\_term = p\_gain \times error \f$
+  - \f$ i\_term \mathrel{+}= i\_gain \times error \times dt \f$
+  - \f$ d\_term = d\_gain \times d\_error \f$
+  and:
+  - \f$ error = desired\_state - measured\_state \f$
+  - \f$ d\_error = (error - error\_{last}) / dt \f$
 
-  In particular, this class implements the standard
-  pid equation:
+  \section parameters Parameters
+  \param p                          Proportional gain. Reacts to current error.
+  \param i                          Integral gain. Accumulates past error to eliminate steady-state error.
+  \param d                          Derivative gain. Predicts future error to reduce overshoot and settling time.
+  \param u\_min                     Minimum bound for the controller output.
+  \param u\_max                     Maximum bound for the controller output.
+  \param tracking\_time\_constant   Tracking time constant for BACK_CALCULATION anti-windup.
+                                   If zero, a default is chosen based on gains:
+                                   - \f$ \sqrt{d\_gain / i\_gain} \f$ if \c d\_gain ≠ 0
+                                   - \f$ p\_gain / i\_gain \f$ otherwise.
+  \param antiwindup\_strat          Anti-windup strategy:
+                                   - NONE: no anti-windup (integral always accumulates).
+                                   - BACK_CALCULATION: adjusts \c i\_term based on difference between saturated
+                                     and unsaturated outputs using \c tracking\_time\_constant.
+                                   - CONDITIONAL_INTEGRATION: only integrates when output is not saturated
+                                     or error drives it away from saturation.
 
-  \f$command  = p_{term} + i_{term} + d_{term} \f$
+  \section antiwindup Anti-Windup Strategies
+  Without anti-windup, clamping causes integral windup, leading to overshoot and sluggish
+  recovery. This class provides two strategies:
 
-  where: <br>
-  <UL TYPE="none">
-  <LI>  \f$ p_{term}  = p_{gain} * p_{error} \f$
-  <LI>  \f$ i_{term}  = i_{term} + \int{i_{gain} * p_{error} * dt} \f$
-  <LI>  \f$ d_{term}  = d_{gain} * d_{error} \f$
-  <LI>  \f$ d_{error} = (p_{error} - p_{error last}) / dt \f$
-  </UL>
+  - **BACK_CALCULATION**
+    \f[
+      i\_term \mathrel{+}= dt \times \Bigl(i\_gain \times error + \frac{1}{trk\_tc}\,(command_{sat} - command)\Bigr)
+    \f]
+    Prevents excessive accumulation by correcting \c i\_term toward the saturation limit.
 
-  given:<br>
-  <UL TYPE="none">
-  <LI>  \f$ p_{error}  = p_{desired} - p_{state} \f$.
-  </UL>
+  - **CONDITIONAL_INTEGRATION**
+    Integrates only if
+    \f[
+      (command - command_{sat} = 0)\quad\lor\quad(error \times command \le 0)
+    \f]
+    Freezes integration when saturated and error drives further saturation.
 
-  \param p Proportional gain
-
-  \param d Derivative gain
-
-  \param i Integral gain
-
-  \param i_clamp Minimum and maximum bounds for the integral windup, the clamp is applied to the \f$i_{term}\f$
-
-  \param u_clamp Minimum and maximum bounds for the controller output. The clamp is applied to the \f$command\f$.
-
-  \section Usage
-
-  To use the Pid class, you should first call some version of init()
-  (in non-realtime) and then call updatePid() at every update step.
-  For example:
-
-  \verbatim
+  \section usage Usage Example
+  Initialize and compute at each control step:
+  \code{.cpp}
   control_toolbox::Pid pid;
-  pid.initialize(6.0, 1.0, 2.0, 0.3, -0.3);
-  double position_desired = 0.5;
-  ...
-  rclcpp::Time last_time = get_clock()->now();
-  while (true) {
-  rclcpp::Time time = get_clock()->now();
-  double effort = pid.compute_command(position_desired - currentPosition(), time - last_time);
-  last_time = time;
+  pid.initialize(6.0, 1.0, 2.0, -5.0, 5.0,
+                 2.0, control_toolbox::AntiwindupStrategy::BACK_CALCULATION);
+  rclcpp::Time last = get_clock()->now();
+  while (running) {
+    rclcpp::Time now = get_clock()->now();
+    double effort = pid.compute_command(setpoint - current(), now - last);
+    last = now;
   }
-  \endverbatim
+  \endcode
 
 */
 /***************************************************/
@@ -499,24 +508,6 @@ public:
     double p, double i, double d, double i_max, double i_min, bool antiwindup = false);
 
   /*!
-   * \brief Initialize Pid-gains and term limits
-   *
-   * \param p The proportional gain.
-   * \param i The integral gain.
-   * \param d The derivative gain.
-   * \param i_max Upper integral clamp.
-   * \param i_min Lower integral clamp.
-   * \param antiwindup Antiwindup functionality. When set to true, limits
-        the integral error to prevent windup; otherwise, constrains the
-        integral contribution to the control output. i_max and
-        i_min are applied in both scenarios.
-   *
-   * \note New gains are not applied if i_min_ > i_max_
-   */
-  [[deprecated("Use initialize() instead")]] void initPid(
-    double p, double i, double d, double i_max, double i_min, bool antiwindup = false);
-
-  /*!
    * \brief Initialize Pid-gains and term limits.
    *
    * \param p The proportional gain.
@@ -572,17 +563,6 @@ public:
    * \param d The derivative gain.
    * \param i_max Upper integral clamp.
    * \param i_min Lower integral clamp.
-   */
-  [[deprecated("Use get_gains() instead")]] void getGains(
-    double & p, double & i, double & d, double & i_max, double & i_min);
-
-  /*!
-   * \brief Get PID gains for the controller.
-   * \param p The proportional gain.
-   * \param i The integral gain.
-   * \param d The derivative gain.
-   * \param i_max Upper integral clamp.
-   * \param i_min Lower integral clamp.
    * \param antiwindup Anti-windup functionality. When set to true, limits
         the integral error to prevent windup; otherwise, constrains the
         integral contribution to the control output. i_max and
@@ -592,21 +572,6 @@ public:
    */
   [[deprecated("Use get_gains overload with AntiWindupStrategy argument.")]]
   void get_gains(
-    double & p, double & i, double & d, double & i_max, double & i_min, bool & antiwindup);
-
-  /*!
-   * \brief Get PID gains for the controller.
-   * \param p The proportional gain.
-   * \param i The integral gain.
-   * \param d The derivative gain.
-   * \param i_max Upper integral clamp.
-   * \param i_min Lower integral clamp.
-   * \param antiwindup Antiwindup functionality. When set to true, limits
-        the integral error to prevent windup; otherwise, constrains the
-        integral contribution to the control output. i_max and
-        i_min are applied in both scenarios.
-   */
-  [[deprecated("Use get_gains() instead")]] void getGains(
     double & p, double & i, double & d, double & i_max, double & i_min, bool & antiwindup);
 
   /*!
@@ -638,14 +603,6 @@ public:
    * \brief Get PID gains for the controller.
    * \return gains A struct of the PID gain values
    *
-   * \note This method is not RT safe
-   */
-  [[deprecated("Use get_gains() instead")]] Gains getGains();
-
-  /*!
-   * \brief Get PID gains for the controller.
-   * \return gains A struct of the PID gain values
-   *
    * \note This method can be called from the RT loop
    */
   Gains get_gains_rt() { return gains_; }
@@ -668,23 +625,6 @@ public:
    */
   [[deprecated("Use set_gains with AntiWindupStrategy instead.")]]
   bool set_gains(double p, double i, double d, double i_max, double i_min, bool antiwindup = false);
-
-  /*!
-   * \brief Set PID gains for the controller.
-   * \param p The proportional gain.
-   * \param i The integral gain.
-   * \param d The derivative gain.
-   * \param i_max Upper integral clamp.
-   * \param i_min Lower integral clamp.
-   * \param antiwindup Antiwindup functionality. When set to true, limits
-        the integral error to prevent windup; otherwise, constrains the
-        integral contribution to the control output. i_max and
-        i_min are applied in both scenarios.
-   *
-   * \note New gains are not applied if i_min > i_max
-   */
-  [[deprecated("Use set_gains() instead")]] void setGains(
-    double p, double i, double d, double i_max, double i_min, bool antiwindup = false);
 
   /*!
    * \brief Set PID gains for the controller.
@@ -717,14 +657,6 @@ public:
   bool set_gains(const Gains & gains);
 
   /*!
-   * \brief Set PID gains for the controller.
-   * \param gains A struct of the PID gain values
-   *
-   * \note New gains are not applied if gains.i_min_ > gains.i_max_
-   */
-  [[deprecated("Use set_gains() instead")]] void setGains(const Gains & gains);
-
-  /*!
    * \brief Set the PID error and compute the PID command with nonuniform time
    * step size. The derivative error is computed from the change in the error
    * and the timestep \c dt_s.
@@ -735,19 +667,6 @@ public:
    * \returns PID command
    */
   [[nodiscard]] double compute_command(double error, const double & dt_s);
-
-  /*!
-   * \brief Set the PID error and compute the PID command with nonuniform time
-   * step size. The derivative error is computed from the change in the error
-   * and the timestep \c dt.
-   *
-   * \param error  Error since last call (error = target - state)
-   * \param dt Change in time since last call in nanoseconds
-   *
-   * \returns PID command
-   */
-  [[deprecated("Use compute_command() instead")]] [[nodiscard]] double computeCommand(
-    double error, uint64_t dt);
 
   /*!
    * \brief Set the PID error and compute the PID command with nonuniform time
@@ -804,20 +723,6 @@ public:
    * derivative error.
    *
    * \param error Error since last call (error = target - state)
-   * \param error_dot d(Error)/(dt/1e9) since last call
-   * \param dt Change in time since last call in nanoseconds
-   *
-   * \returns PID command
-   */
-  [[deprecated("Use compute_command() instead")]] [[nodiscard]] double computeCommand(
-    double error, double error_dot, uint64_t dt);
-
-  /*!
-   * \brief Set the PID error and compute the PID command with nonuniform
-   * time step size. This also allows the user to pass in a precomputed
-   * derivative error.
-   *
-   * \param error Error since last call (error = target - state)
    * \param error_dot d(Error)/dt_ns since last call
    * \param dt_ns Change in time since last call, measured in nanoseconds.
    *
@@ -859,24 +764,9 @@ public:
   void set_current_cmd(double cmd);
 
   /*!
-   * \brief Set current command for this PID controller
-   */
-  [[deprecated("Use set_current_cmd() instead")]] void setCurrentCmd(double cmd);
-
-  /*!
    * \brief Return current command for this PID controller
    */
   double get_current_cmd();
-
-  /*!
-   * \brief Return current command for this PID controller
-   */
-  [[deprecated("Use get_current_cmd() instead")]] double getCurrentCmd();
-
-  /*!
-   * \brief Return derivative error
-   */
-  [[deprecated("Use get_current_pid_errors() instead")]] double getDerivativeError();
 
   /*!
    * \brief Return PID error terms for the controller.
@@ -885,15 +775,6 @@ public:
    * \param de  The derivative error.
    */
   void get_current_pid_errors(double & pe, double & ie, double & de);
-
-  /*!
-   * \brief Return PID error terms for the controller.
-   * \param pe  The proportional error.
-   * \param ie  The integral error.
-   * \param de  The derivative error.
-   */
-  [[deprecated("Use get_current_pid_errors() instead")]] void getCurrentPIDErrors(
-    double & pe, double & ie, double & de);
 
   /*!
    * @brief Custom assignment operator
