@@ -27,6 +27,9 @@
 #include "rclcpp/utilities.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 using control_toolbox::AntiWindupStrategy;
 using PidStateMsg = control_msgs::msg::PidState;
 using rclcpp::executors::MultiThreadedExecutor;
@@ -41,9 +44,10 @@ TEST(PidPublisherTest, PublishTest)
   control_toolbox::PidROS pid_ros = control_toolbox::PidROS(node, "", "", true);
 
   AntiWindupStrategy antiwindup_strat;
-  antiwindup_strat.type = AntiWindupStrategy::NONE;
+  antiwindup_strat.type = AntiWindupStrategy::LEGACY;
   antiwindup_strat.i_max = 5.0;
   antiwindup_strat.i_min = -5.0;
+  antiwindup_strat.legacy_antiwindup = false;
   antiwindup_strat.tracking_time_constant = 1.0;
   pid_ros.initialize_from_args(1.0, 1.0, 1.0, 5.0, -5.0, antiwindup_strat, false);
 
@@ -56,7 +60,7 @@ TEST(PidPublisherTest, PublishTest)
     "/pid_state", rclcpp::SensorDataQoS(), state_callback);
 
   double command = pid_ros.compute_command(-0.5, rclcpp::Duration(1, 0));
-  EXPECT_EQ(-1.0, command);
+  EXPECT_EQ(-1.5, command);
 
   // wait for callback
   for (size_t i = 0; i < ATTEMPTS && !callback_called; ++i)
@@ -79,9 +83,10 @@ TEST(PidPublisherTest, PublishTest_start_deactivated)
   control_toolbox::PidROS pid_ros = control_toolbox::PidROS(node, "", "", false);
 
   AntiWindupStrategy antiwindup_strat;
-  antiwindup_strat.type = AntiWindupStrategy::NONE;
+  antiwindup_strat.type = AntiWindupStrategy::LEGACY;
   antiwindup_strat.i_max = 5.0;
   antiwindup_strat.i_min = -5.0;
+  antiwindup_strat.legacy_antiwindup = false;
   antiwindup_strat.tracking_time_constant = 1.0;
   pid_ros.initialize_from_args(1.0, 1.0, 1.0, 5.0, -5.0, antiwindup_strat, false);
 
@@ -94,7 +99,7 @@ TEST(PidPublisherTest, PublishTest_start_deactivated)
     "/pid_state", rclcpp::SensorDataQoS(), state_callback);
 
   double command = pid_ros.compute_command(-0.5, rclcpp::Duration(1, 0));
-  EXPECT_EQ(-1.0, command);
+  EXPECT_EQ(-1.5, command);
 
   // wait for callback
   for (size_t i = 0; i < ATTEMPTS && !callback_called; ++i)
@@ -148,9 +153,10 @@ TEST(PidPublisherTest, PublishTest_prefix)
   control_toolbox::PidROS pid_ros = control_toolbox::PidROS(node, "", "global", true);
 
   AntiWindupStrategy antiwindup_strat;
-  antiwindup_strat.type = AntiWindupStrategy::NONE;
+  antiwindup_strat.type = AntiWindupStrategy::LEGACY;
   antiwindup_strat.i_max = 5.0;
   antiwindup_strat.i_min = -5.0;
+  antiwindup_strat.legacy_antiwindup = false;
   antiwindup_strat.tracking_time_constant = 1.0;
   pid_ros.initialize_from_args(1.0, 1.0, 1.0, 5.0, -5.0, antiwindup_strat, false);
 
@@ -163,7 +169,7 @@ TEST(PidPublisherTest, PublishTest_prefix)
     "/global/pid_state", rclcpp::SensorDataQoS(), state_callback);
 
   double command = pid_ros.compute_command(-0.5, rclcpp::Duration(1, 0));
-  EXPECT_EQ(-1.0, command);
+  EXPECT_EQ(-1.5, command);
 
   // wait for callback
   for (size_t i = 0; i < ATTEMPTS && !callback_called; ++i)
@@ -186,9 +192,10 @@ TEST(PidPublisherTest, PublishTest_local_prefix)
   control_toolbox::PidROS pid_ros = control_toolbox::PidROS(node, "", "~/local/", true);
 
   AntiWindupStrategy antiwindup_strat;
-  antiwindup_strat.type = AntiWindupStrategy::NONE;
+  antiwindup_strat.type = AntiWindupStrategy::LEGACY;
   antiwindup_strat.i_max = 5.0;
   antiwindup_strat.i_min = -5.0;
+  antiwindup_strat.legacy_antiwindup = false;
   antiwindup_strat.tracking_time_constant = 1.0;
   pid_ros.initialize_from_args(1.0, 1.0, 1.0, 5.0, -5.0, antiwindup_strat, false);
 
@@ -201,7 +208,7 @@ TEST(PidPublisherTest, PublishTest_local_prefix)
     "~/local/pid_state", rclcpp::SensorDataQoS(), state_callback);
 
   double command = pid_ros.compute_command(-0.5, rclcpp::Duration(1, 0));
-  EXPECT_EQ(-1.0, command);
+  EXPECT_EQ(-1.5, command);
 
   // wait for callback
   for (size_t i = 0; i < ATTEMPTS && !callback_called; ++i)
@@ -228,9 +235,10 @@ TEST(PidPublisherTest, PublishTestLifecycle)
       pid_ros.get_pid_state_publisher());
 
   AntiWindupStrategy antiwindup_strat;
-  antiwindup_strat.type = AntiWindupStrategy::NONE;
+  antiwindup_strat.type = AntiWindupStrategy::LEGACY;
   antiwindup_strat.i_max = 5.0;
   antiwindup_strat.i_min = -5.0;
+  antiwindup_strat.legacy_antiwindup = false;
   antiwindup_strat.tracking_time_constant = 1.0;
   pid_ros.initialize_from_args(1.0, 1.0, 1.0, 5.0, -5.0, antiwindup_strat, false);
 
@@ -243,7 +251,7 @@ TEST(PidPublisherTest, PublishTestLifecycle)
     "/pid_state", rclcpp::SensorDataQoS(), state_callback);
 
   double command = pid_ros.compute_command(-0.5, rclcpp::Duration(1, 0));
-  EXPECT_EQ(-1.0, command);
+  EXPECT_EQ(-1.5, command);
 
   // wait for callback
   for (size_t i = 0; i < ATTEMPTS && !callback_called; ++i)
@@ -265,3 +273,5 @@ int main(int argc, char ** argv)
   rclcpp::shutdown();
   return result;
 }
+
+#pragma GCC diagnostic pop
