@@ -2,6 +2,16 @@
 Changelog for package control_toolbox
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+5.7.0 (2025-09-22)
+------------------
+* Add backward_ros dependency (`#475 <https://github.com/ros-controls/control_toolbox/issues/475>`_)
+* Remove legacy and deprecated PID parameters (`#436 <https://github.com/ros-controls/control_toolbox/issues/436>`_)
+* Fix rst errors (`#447 <https://github.com/ros-controls/control_toolbox/issues/447>`_)
+* Use the FilterTest fixture instead (`#439 <https://github.com/ros-controls/control_toolbox/issues/439>`_)
+* Fix deprecated TF headers (`#444 <https://github.com/ros-controls/control_toolbox/issues/444>`_)
+* Declare missing parameters for PID (`#443 <https://github.com/ros-controls/control_toolbox/issues/443>`_)
+* Contributors: Christoph Fröhlich, Victor Coutinho Vieira Santos
+
 5.6.0 (2025-07-22)
 ------------------
 * Deprecate `prefix_is_for_params` of PidROS (`#431 <https://github.com/ros-controls/control_toolbox/issues/431>`_)
@@ -357,9 +367,9 @@ Changelog for package control_toolbox
 * catkinizing, could still be cleaned up
 * Fixing doc errors in PID
 * Changing @ commands to \ commands
-* Enforcing i_min_ <= 0 and i_max_ >= 0 in integral bound parameters, reducing duplicated code
+* Enforcing ``i_min_`` <= 0 and ``i_max_`` >= 0 in integral bound parameters, reducing duplicated code
 * Merge pull request `#14 <https://github.com/ros-controls/control_toolbox/issues/14>`_ from bobholmberg/fix-PID-unbounded-i_error
-  Using zero i_gain_ to turn off integral control did unsavory things.
+  Using zero ``i_gain_`` to turn off integral control did unsavory things.
 * Adding alternative name for new pid command computation API
 * Fixing merge error
 * Merge branch 'fix-pid-backwards-compatibility' into fix-PID-unbounded-i_error
@@ -376,13 +386,13 @@ Changelog for package control_toolbox
 * Specifying div-by-zero test, adding other integral term tests
 * Merge branch 'test-bad-integral-bounds' into fix-PID-unbounded-i_error
 * Adding test to expose Pid class zero-division vulnerability
-* If the user did not want integral control and set i_gain_ to zero,
-  then dividing by i_gain_ would set i_error_ to NaN.  This is not
-  desired.  Instead, replace the use of division to create i_term
-  with direct integration of i_term_.
-  Replace private member i_error_ with i_term_.
-  In getCurrentPIDErrors() create & return i_error_ with the same old meaning and units.
-  NOTE: i_error_ is not needed internally anywhere else.
+* If the user did not want integral control and set ``i_gain_`` to zero,
+  then dividing by ``i_gain_`` would set ``i_error_`` to NaN.  This is not
+  desired.  Instead, replace the use of division to create ``i_term``
+  with direct integration of ``i_term_``.
+  Replace private member ``i_error_`` with ``i_term_``.
+  In ``getCurrentPIDErrors()`` create & return ``i_error_`` with the same old meaning and units.
+  NOTE: ``i_error_`` is not needed internally anywhere else.
 * Cleaning up documentation, making argument names in function declaration match those in the implementation
 * adding doxygen deprecation flags
 * Fixing documentation
