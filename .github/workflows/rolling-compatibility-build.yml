@@ -1,4 +1,6 @@
-name: Rolling - Pre-Commit
+name: Rolling - Check Compatibility
+# author: Christoph Froehlich <christoph.froehlich@ait.ac.at>
+# description: 'Build & test the rolling version on earlier distros.'
 
 on:
   workflow_dispatch:
@@ -15,11 +17,14 @@ concurrency:
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/heads') }}
 
 jobs:
-  pre-commit:
-    uses: ros-controls/ros2_control_ci/.github/workflows/reusable-pre-commit.yml@master
+  build:
+    uses: ros-controls/ros2_control_ci/.github/workflows/reusable-industrial-ci-with-cache.yml@master
     strategy:
       fail-fast: false
       matrix:
-        ROS_DISTRO: [kilted, rolling]
+        ROS_DISTRO: [humble, jazzy, kilted]
     with:
       ros_distro: ${{ matrix.ROS_DISTRO }}
+      ros_repo: testing
+      upstream_workspace: control_toolbox.rolling.repos
+      ref_for_scheduled_build: master
