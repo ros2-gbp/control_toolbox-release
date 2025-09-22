@@ -4,9 +4,19 @@ on:
   push:
     branches:
       - ros2-master
+  pull_request:
+    branches:
+      - ros2-master
+    paths:
+      - .github/workflows/rolling-build-source.yml
   schedule:
     # Run every day to detect flakiness and broken dependencies
-    - cron: '03 3 * * *'
+    - cron: '03 3 * * MON-FRI'
+
+concurrency:
+  # cancel previous runs of the same workflow, except for pushes on given branches branch
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/heads') }}
 
 jobs:
   source_build:
@@ -17,10 +27,9 @@ jobs:
         include:
         - ROS_DISTRO: rolling
           CONTAINER: ubuntu:24.04
-          OS_NAME: ubuntu-latest
+        - ROS_DISTRO: kilted
+          CONTAINER: ubuntu:24.04
     with:
       ros_distro: ${{ matrix.ROS_DISTRO }}
       ref: ros2-master
-      ros2_repo_branch: ${{ matrix.ROS_DISTRO }}
-      os_name: ${{ matrix.OS_NAME }}
       container: ${{ matrix.CONTAINER }}
