@@ -39,47 +39,20 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
-#include <limits>
 #include <stdexcept>
 
 #include "control_toolbox/pid.hpp"
 
-// Disable deprecated warnings
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 namespace control_toolbox
 {
-constexpr double UMAX_INFINITY = std::numeric_limits<double>::infinity();
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-Pid::Pid(double p, double i, double d, double i_max, double i_min, bool antiwindup)
-{
-  if (i_min > i_max)
-  {
-    throw std::invalid_argument("received i_min > i_max");
-  }
-  AntiWindupStrategy antiwindup_strat;
-  antiwindup_strat.type = AntiWindupStrategy::LEGACY;
-  antiwindup_strat.i_max = i_max;
-  antiwindup_strat.i_min = i_min;
-  antiwindup_strat.legacy_antiwindup = antiwindup;
-  set_gains(p, i, d, UMAX_INFINITY, -UMAX_INFINITY, antiwindup_strat);
-
-  // Initialize saved i-term values
-  clear_saved_iterm();
-
-  reset();
-}
-#pragma GCC diagnostic pop
 
 Pid::Pid(
   double p, double i, double d, double u_max, double u_min,
   const AntiWindupStrategy & antiwindup_strat)
 {
-  if (u_min > u_max)
+  if (u_min >= u_max)
   {
-    throw std::invalid_argument("received u_min > u_max");
+    throw std::invalid_argument("received u_min >= u_max");
   }
   set_gains(p, i, d, u_max, u_min, antiwindup_strat);
 
@@ -101,23 +74,7 @@ Pid::Pid(const Pid & source)
   reset();
 }
 
-// Enable deprecated warnings again
-#pragma GCC diagnostic pop
-
 Pid::~Pid() {}
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-bool Pid::initialize(double p, double i, double d, double i_max, double i_min, bool antiwindup)
-{
-  if (set_gains(p, i, d, i_max, i_min, antiwindup))
-  {
-    reset();
-    return true;
-  }
-  return false;
-}
-#pragma GCC diagnostic pop
 
 bool Pid::initialize(
   double p, double i, double d, double u_max, double u_min,
@@ -152,28 +109,6 @@ void Pid::reset(bool save_i_term)
 
 void Pid::clear_saved_iterm() { i_term_ = 0.0; }
 
-void Pid::get_gains(double & p, double & i, double & d, double & i_max, double & i_min)
-{
-  double u_max;
-  double u_min;
-  AntiWindupStrategy antiwindup_strat;
-  get_gains(p, i, d, u_max, u_min, antiwindup_strat);
-  i_max = antiwindup_strat.i_max;
-  i_min = antiwindup_strat.i_min;
-}
-
-void Pid::get_gains(
-  double & p, double & i, double & d, double & i_max, double & i_min, bool & antiwindup)
-{
-  double u_max;
-  double u_min;
-  AntiWindupStrategy antiwindup_strat;
-  get_gains(p, i, d, u_max, u_min, antiwindup_strat);
-  i_max = antiwindup_strat.i_max;
-  i_min = antiwindup_strat.i_min;
-  antiwindup = antiwindup_strat.legacy_antiwindup;
-}
-
 void Pid::get_gains(
   double & p, double & i, double & d, double & u_max, double & u_min,
   AntiWindupStrategy & antiwindup_strat)
@@ -192,26 +127,6 @@ Pid::Gains Pid::get_gains()
   // blocking, as get_gains() is called from non-RT thread
   return gains_box_.get();
 }
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-bool Pid::set_gains(double p, double i, double d, double i_max, double i_min, bool antiwindup)
-{
-  try
-  {
-    Gains gains(p, i, d, i_max, i_min, antiwindup);
-    if (set_gains(gains))
-    {
-      return true;
-    }
-  }
-  catch (const std::exception & e)
-  {
-    std::cerr << e.what() << '\n';
-  }
-  return false;
-}
-#pragma GCC diagnostic pop
 
 bool Pid::set_gains(
   double p, double i, double d, double u_max, double u_min,
@@ -246,12 +161,16 @@ bool Pid::set_gains(const Gains & gains_in)
 
     if (gains.antiwindup_strat_.type == AntiWindupStrategy::BACK_CALCULATION)
     {
-      if (is_zero(gains.antiwindup_strat_.tracking_time_constant) && !is_zero(gains.d_gain_))
+      if (
+        is_zero(gains.antiwindup_strat_.tracking_time_constant) && !is_zero(gains.d_gain_) &&
+        !is_zero(gains.i_gain_))
       {
         // Default value for tracking time constant for back calculation technique
         gains.antiwindup_strat_.tracking_time_constant = std::sqrt(gains.d_gain_ / gains.i_gain_);
       }
-      else if (is_zero(gains.antiwindup_strat_.tracking_time_constant) && is_zero(gains.d_gain_))
+      else if (
+        is_zero(gains.antiwindup_strat_.tracking_time_constant) && is_zero(gains.d_gain_) &&
+        !is_zero(gains.i_gain_))
       {
         // Default value for tracking time constant for back calculation technique
         gains.antiwindup_strat_.tracking_time_constant = gains.p_gain_ / gains.i_gain_;
@@ -279,8 +198,8 @@ double Pid::compute_command(double error, const double & dt_s)
   // don't reset controller but return NaN
   if (!std::isfinite(error))
   {
-    std::cout << "Received a non-finite error value\n";
-    return cmd_ = std::numeric_limits<double>::quiet_NaN();
+    std::cerr << "Received a non-finite error value\n";
+    return cmd_ = std::numeric_limits<float>::quiet_NaN();
   }
 
   // Calculate the derivative error
@@ -324,7 +243,7 @@ double Pid::compute_command(double error, double error_dot, const double & dt_s)
 {
   if (is_zero(dt_s))
   {
-    // don't update anything
+    // Don't update anything
     return cmd_;
   }
   else if (dt_s < 0.0)
@@ -342,7 +261,7 @@ double Pid::compute_command(double error, double error_dot, const double & dt_s)
   p_error_ = error;      // This is error = target - state
   d_error_ = error_dot;  // This is the derivative of error
 
-  // don't reset controller but return NaN
+  // Don't reset controller but return NaN
   if (!std::isfinite(error) || !std::isfinite(error_dot))
   {
     std::cerr << "Received a non-finite error/error_dot value\n";
@@ -361,35 +280,11 @@ double Pid::compute_command(double error, double error_dot, const double & dt_s)
       "PID: Antiwindup strategy cannot be UNDEFINED. Please set a valid antiwindup strategy.");
   }
 
-  // Calculate integral contribution to command
   const bool is_error_in_deadband_zone =
     control_toolbox::is_zero(error, gains_.antiwindup_strat_.error_deadband);
-  if (!is_error_in_deadband_zone && gains_.antiwindup_strat_.type == AntiWindupStrategy::LEGACY)
-  {
-    if (gains_.antiwindup_strat_.legacy_antiwindup)
-    {
-      // Prevent i_term_ from climbing higher than permitted by i_max_/i_min_
-      i_term_ =
-        std::clamp(i_term_ + gains_.i_gain_ * dt_s * p_error_, gains_.i_min_, gains_.i_max_);
-    }
-    else
-    {
-      i_term_ += gains_.i_gain_ * dt_s * p_error_;
-    }
-  }
 
   // Compute the command
-  if (
-    !gains_.antiwindup_strat_.legacy_antiwindup &&
-    gains_.antiwindup_strat_.type == AntiWindupStrategy::LEGACY)
-  {
-    // Limit i_term so that the limit is meaningful in the output
-    cmd_unsat_ = p_term + std::clamp(i_term_, gains_.i_min_, gains_.i_max_) + d_term;
-  }
-  else
-  {
-    cmd_unsat_ = p_term + i_term_ + d_term;
-  }
+  cmd_unsat_ = p_term + i_term_ + d_term;
 
   if (std::isfinite(gains_.u_min_) || std::isfinite(gains_.u_max_))
   {
@@ -407,7 +302,6 @@ double Pid::compute_command(double error, double error_dot, const double & dt_s)
   {
     cmd_ = cmd_unsat_;
   }
-
   if (!is_error_in_deadband_zone)
   {
     if (
@@ -431,6 +325,8 @@ double Pid::compute_command(double error, double error_dot, const double & dt_s)
     }
   }
 
+  i_term_ = std::clamp(i_term_, gains_.antiwindup_strat_.i_min, gains_.antiwindup_strat_.i_max);
+
   return cmd_;
 }
 
@@ -444,63 +340,5 @@ void Pid::get_current_pid_errors(double & pe, double & ie, double & de)
   ie = i_term_;
   de = d_error_;
 }
-
-// TODO(christophfroehlich): Remove deprecated functions
-// BEGIN DEPRECATED
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-double Pid::computeCommand(double error, uint64_t dt)
-{
-  return compute_command(error, static_cast<double>(dt) / 1.e9);
-}
-
-[[nodiscard]] double Pid::computeCommand(double error, double error_dot, uint64_t dt)
-{
-  return compute_command(error, error_dot, static_cast<double>(dt) / 1.e9);
-}
-
-void Pid::setCurrentCmd(double cmd) { set_current_cmd(cmd); }
-
-double Pid::getCurrentCmd() { return get_current_cmd(); }
-
-double Pid::getDerivativeError()
-{
-  double pe, ie, de;
-  get_current_pid_errors(pe, ie, de);
-  return de;
-}
-
-void Pid::getCurrentPIDErrors(double & pe, double & ie, double & de)
-{
-  get_current_pid_errors(pe, ie, de);
-}
-
-void Pid::initPid(double p, double i, double d, double i_max, double i_min, bool antiwindup)
-{
-  initialize(p, i, d, i_max, i_min, antiwindup);
-}
-
-void Pid::getGains(double & p, double & i, double & d, double & i_max, double & i_min)
-{
-  get_gains(p, i, d, i_max, i_min);
-}
-
-void Pid::getGains(
-  double & p, double & i, double & d, double & i_max, double & i_min, bool & antiwindup)
-{
-  get_gains(p, i, d, i_max, i_min, antiwindup);
-}
-
-Pid::Gains Pid::getGains() { return get_gains(); }
-
-void Pid::setGains(double p, double i, double d, double i_max, double i_min, bool antiwindup)
-{
-  set_gains(p, i, d, i_max, i_min, antiwindup);
-}
-
-void Pid::setGains(const Pid::Gains & gains) { set_gains(gains); }
-
-#pragma GCC diagnostic pop
-// END DEPRECATED
 
 }  // namespace control_toolbox

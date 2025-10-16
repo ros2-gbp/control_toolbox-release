@@ -3,10 +3,20 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - ros2-master
+      - master
+    paths:
+      - '**.hpp'
+      - '**.h'
+      - '**.cpp'
+      - '**.py'
+      - '**.yaml'
+      - '.github/workflows/rolling-build-source.yml'
+      - '**/package.xml'
+      - '**/CMakeLists.txt'
+      - '**.xml'
   pull_request:
     branches:
-      - ros2-master
+      - master
     paths:
       - .github/workflows/rolling-build-source.yml
   schedule:
@@ -27,9 +37,7 @@ jobs:
         include:
         - ROS_DISTRO: rolling
           CONTAINER: ubuntu:24.04
-        - ROS_DISTRO: kilted
-          CONTAINER: ubuntu:24.04
     with:
       ros_distro: ${{ matrix.ROS_DISTRO }}
-      ref: ros2-master
+      ref: master
       container: ${{ matrix.CONTAINER }}
