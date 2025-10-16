@@ -82,8 +82,8 @@ public:
 
   AntiWindupStrategy()
   : type(UNDEFINED),
-    i_min(std::numeric_limits<double>::quiet_NaN()),
-    i_max(std::numeric_limits<double>::quiet_NaN()),
+    i_min(-std::numeric_limits<double>::infinity()),
+    i_max(std::numeric_limits<double>::infinity()),
     legacy_antiwindup(false),
     tracking_time_constant(0.0),
     error_deadband(std::numeric_limits<double>::epsilon())
@@ -135,20 +135,15 @@ public:
         "AntiWindupStrategy 'back_calculation' requires a valid positive tracking time constant "
         "(tracking_time_constant)");
     }
-    if (type == LEGACY && ((i_min > i_max) || !std::isfinite(i_min) || !std::isfinite(i_max)))
+    if (i_min > 0)
     {
       throw std::invalid_argument(
-        fmt::format(
-          "AntiWindupStrategy 'legacy' requires i_min < i_max and to be finite (i_min: {}, i_max: "
-          "{})",
-          i_min, i_max));
+        fmt::format("PID requires i_min to be smaller or equal to 0 (i_min: {})", i_min));
     }
-    if (type != LEGACY && (std::isfinite(i_min) || std::isfinite(i_max)))
+    if (i_max < 0)
     {
-      std::cout << "Warning: The i_min and i_max are only valid for the deprecated LEGACY "
-                   "antiwindup strategy. Please use the AntiWindupStrategy::set_type() method to "
-                   "set the type of antiwindup strategy you want to use."
-                << std::endl;
+      throw std::invalid_argument(
+        fmt::format("PID requires i_max to be greater or equal to 0 (i_max: {})", i_max));
     }
     if (
       type != NONE && type != UNDEFINED && type != LEGACY && type != BACK_CALCULATION &&
@@ -156,6 +151,13 @@ public:
     {
       throw std::invalid_argument("AntiWindupStrategy has an invalid type");
     }
+  }
+
+  void print() const
+  {
+    std::cout << "antiwindup_strat: " << to_string() << "\ti_max: " << i_max << ", i_min: " << i_min
+              << "\ttracking_time_constant: " << tracking_time_constant
+              << "\terror_deadband: " << error_deadband << std::endl;
   }
 
   operator std::string() const { return to_string(); }
@@ -182,8 +184,8 @@ public:
   }
 
   Value type = UNDEFINED;
-  double i_min = std::numeric_limits<double>::quiet_NaN(); /**< Minimum allowable integral term. */
-  double i_max = std::numeric_limits<double>::quiet_NaN(); /**< Maximum allowable integral term. */
+  double i_min = -std::numeric_limits<double>::infinity(); /**< Minimum allowable integral term. */
+  double i_max = std::numeric_limits<double>::infinity();  /**< Maximum allowable integral term. */
 
   bool legacy_antiwindup = false; /**< Use legacy anti-windup strategy. */
 
@@ -370,27 +372,11 @@ public:
       antiwindup_(antiwindup_strat.legacy_antiwindup),
       antiwindup_strat_(antiwindup_strat)
     {
-      if (std::isnan(u_min) || std::isnan(u_max))
-      {
-        throw std::invalid_argument("Gains: u_min and u_max must not be NaN");
-      }
-      if (u_min > u_max)
-      {
-        std::cout << "Received invalid u_min and u_max values: " << "u_min: " << u_min
-                  << ", u_max: " << u_max << ". Setting saturation to false." << std::endl;
-        u_max_ = std::numeric_limits<double>::infinity();
-        u_min_ = -std::numeric_limits<double>::infinity();
-      }
     }
 
     bool validate(std::string & error_msg) const
     {
-      if (i_min_ > i_max_)
-      {
-        error_msg = fmt::format("Gains: i_min ({}) must be less than i_max ({})", i_min_, i_max_);
-        return false;
-      }
-      else if (u_min_ >= u_max_)
+      if (u_min_ >= u_max_)  // is false if any value is nan
       {
         error_msg = fmt::format("Gains: u_min ({}) must be less than u_max ({})", u_min_, u_max_);
         return false;
@@ -422,16 +408,17 @@ public:
     void print() const
     {
       std::cout << "Gains: p: " << p_gain_ << ", i: " << i_gain_ << ", d: " << d_gain_
-                << ", i_max: " << i_max_ << ", i_min: " << i_min_ << ", u_max: " << u_max_
-                << ", u_min: " << u_min_ << ", antiwindup: " << antiwindup_
-                << ", antiwindup_strat: " << antiwindup_strat_.to_string() << std::endl;
+                << ", u_max: " << u_max_ << ", u_min: " << u_min_ << std::endl;
+      antiwindup_strat_.print();
     }
 
     double p_gain_ = 0.0; /**< Proportional gain. */
     double i_gain_ = 0.0; /**< Integral gain. */
     double d_gain_ = 0.0; /**< Derivative gain. */
-    double i_max_ = 0.0;  /**< Maximum allowable integral term. */
-    double i_min_ = 0.0;  /**< Minimum allowable integral term. */
+    double i_max_ =
+      std::numeric_limits<double>::infinity(); /**< Maximum allowable integral term. */
+    double i_min_ =
+      -std::numeric_limits<double>::infinity(); /**< Minimum allowable integral term. */
     double u_max_ = std::numeric_limits<double>::infinity();  /**< Maximum allowable output. */
     double u_min_ = -std::numeric_limits<double>::infinity(); /**< Minimum allowable output. */
     bool antiwindup_ = false;                                 /**< Anti-windup. */
@@ -456,8 +443,9 @@ public:
    */
   [[deprecated("Use constructor with AntiWindupStrategy only.")]]
   Pid(
-    double p = 0.0, double i = 0.0, double d = 0.0, double i_max = 0.0, double i_min = -0.0,
-    bool antiwindup = false);
+    double p = 0.0, double i = 0.0, double d = 0.0,
+    double i_max = std::numeric_limits<double>::infinity(),
+    double i_min = -std::numeric_limits<double>::infinity(), bool antiwindup = false);
 
   /*!
    * \brief Constructor, initialize Pid-gains and term limits.
@@ -471,7 +459,7 @@ public:
         'conditional_integration', or 'none'. Note that the 'back_calculation' strategy use the
         tracking_time_constant parameter to tune the anti-windup behavior.
    *
-   * \throws An std::invalid_argument exception is thrown if u_min > u_max
+   * \throws An std::invalid_argument exception is thrown if u_min >= u_max.
    */
   Pid(
     double p, double i, double d, double u_max, double u_min,
