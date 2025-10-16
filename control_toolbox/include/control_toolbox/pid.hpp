@@ -57,9 +57,14 @@ namespace control_toolbox
  * \param u_min Lower output clamp.
  * \param tracking_time_constant Specifies the tracking time constant for the 'back_calculation' strategy. If set
  *    to 0.0 when this strategy is selected, a recommended default value will be applied.
- * \param error_deadband Error deadband is used to stop integration when the error is within the given range.
- * \param type Specifies the antiwindup strategy type. Valid values are:
+ * \param legacy_antiwindup Anti-windup functionality. When set to true, limits
+      the integral error to prevent windup; otherwise, constrains the
+      integral contribution to the control output. i_max and
+      i_min are applied in both scenarios.
+  * \param error_deadband Error deadband is used to stop integration when the error is within the given range.
+  * \param type Specifies the antiwindup strategy type. Valid values are:
  *   - `NONE`: No antiwindup strategy applied.
+ *   - `LEGACY`: Legacy antiwindup strategy, which limits the integral term to prevent windup (deprecated: This option will be removed in a future release).
  *   - `BACK_CALCULATION`: Back calculation antiwindup strategy, which uses a tracking time constant.
  *   - `CONDITIONAL_INTEGRATION`: Conditional integration antiwindup strategy, which integrates only when certain conditions are met.
  */
@@ -70,14 +75,16 @@ public:
   {
     UNDEFINED = -1,
     NONE,
+    LEGACY,
     BACK_CALCULATION,
     CONDITIONAL_INTEGRATION
   };
 
   AntiWindupStrategy()
-  : type(NONE),
-    i_max(std::numeric_limits<double>::infinity()),
+  : type(UNDEFINED),
     i_min(-std::numeric_limits<double>::infinity()),
+    i_max(std::numeric_limits<double>::infinity()),
+    legacy_antiwindup(false),
     tracking_time_constant(0.0),
     error_deadband(std::numeric_limits<double>::epsilon())
   {
@@ -93,6 +100,13 @@ public:
     {
       type = CONDITIONAL_INTEGRATION;
     }
+    else if (s == "legacy")
+    {
+      type = LEGACY;
+      std::cout << "Using the legacy anti-windup technique is deprecated. This option will be "
+                   "removed by the ROS 2 Kilted Kaiju release."
+                << std::endl;
+    }
     else if (s == "none")
     {
       type = NONE;
@@ -102,7 +116,7 @@ public:
       type = UNDEFINED;
       throw std::invalid_argument(
         "AntiWindupStrategy: Unknown antiwindup strategy : '" + s +
-        "'. Valid strategies are: 'back_calculation', 'conditional_integration', "
+        "'. Valid strategies are: 'back_calculation', 'conditional_integration', 'legacy', "
         "'none'.");
     }
   }
@@ -132,7 +146,7 @@ public:
         fmt::format("PID requires i_max to be greater or equal to 0 (i_max: {})", i_max));
     }
     if (
-      type != NONE && type != UNDEFINED && type != BACK_CALCULATION &&
+      type != NONE && type != UNDEFINED && type != LEGACY && type != BACK_CALCULATION &&
       type != CONDITIONAL_INTEGRATION)
     {
       throw std::invalid_argument("AntiWindupStrategy has an invalid type");
@@ -159,6 +173,8 @@ public:
         return "back_calculation";
       case CONDITIONAL_INTEGRATION:
         return "conditional_integration";
+      case LEGACY:
+        return "legacy";
       case NONE:
         return "none";
       case UNDEFINED:
@@ -168,8 +184,10 @@ public:
   }
 
   Value type = UNDEFINED;
-  double i_max = std::numeric_limits<double>::infinity();  /**< Maximum allowable integral term. */
   double i_min = -std::numeric_limits<double>::infinity(); /**< Minimum allowable integral term. */
+  double i_max = std::numeric_limits<double>::infinity();  /**< Maximum allowable integral term. */
+
+  bool legacy_antiwindup = false; /**< Use legacy anti-windup strategy. */
 
   // tracking_time_constant Specifies the tracking time constant for the 'back_calculation'
   // strategy. If set to 0.0 a recommended default value will be applied.
@@ -249,8 +267,8 @@ inline bool is_zero(T value, T tolerance = std::numeric_limits<T>::epsilon())
   Initialize and compute at each control step:
   \code{.cpp}
   control_toolbox::Pid pid;
-  pid.initialize(6.0, 1.0, 2.0, 5.0, -5.0,
-                 control_toolbox::AntiWindupStrategy::BACK_CALCULATION);
+  pid.initialize(6.0, 1.0, 2.0, -5.0, 5.0,
+                 2.0, control_toolbox::AntiwindupStrategy::BACK_CALCULATION);
   rclcpp::Time last = get_clock()->now();
   while (running) {
     rclcpp::Time now = get_clock()->now();
@@ -271,6 +289,64 @@ public:
   struct Gains
   {
     /*!
+   * \brief Optional constructor for passing in values without antiwindup and saturation
+   *
+   * \param p The proportional gain.
+   * \param i The integral gain.
+   * \param d The derivative gain.
+   * \param i_max Upper integral clamp.
+   * \param i_min Lower integral clamp.
+   *
+   */
+    [[deprecated("Use constructor with AntiWindupStrategy instead.")]]
+    Gains(double p, double i, double d, double i_max, double i_min)
+    : p_gain_(p),
+      i_gain_(i),
+      d_gain_(d),
+      i_max_(i_max),
+      i_min_(i_min),
+      u_max_(std::numeric_limits<double>::infinity()),
+      u_min_(-std::numeric_limits<double>::infinity()),
+      antiwindup_(false)
+    {
+      antiwindup_strat_.type = AntiWindupStrategy::LEGACY;
+      antiwindup_strat_.i_max = i_max;
+      antiwindup_strat_.i_min = i_min;
+      antiwindup_strat_.legacy_antiwindup = true;
+    }
+
+    /*!
+   * \brief Optional constructor for passing in values without saturation
+   *
+   * \param p The proportional gain.
+   * \param i The integral gain.
+   * \param d The derivative gain.
+   * \param i_max Upper integral clamp.
+   * \param i_min Lower integral clamp.
+   * \param antiwindup Anti-windup functionality. When set to true, limits
+        the integral error to prevent windup; otherwise, constrains the
+        integral contribution to the control output. i_max and
+        i_min are applied in both scenarios.
+   *
+   */
+    [[deprecated("Use constructor with AntiWindupStrategy instead.")]]
+    Gains(double p, double i, double d, double i_max, double i_min, bool antiwindup)
+    : p_gain_(p),
+      i_gain_(i),
+      d_gain_(d),
+      i_max_(i_max),
+      i_min_(i_min),
+      u_max_(std::numeric_limits<double>::infinity()),
+      u_min_(-std::numeric_limits<double>::infinity()),
+      antiwindup_(antiwindup)
+    {
+      antiwindup_strat_.type = AntiWindupStrategy::LEGACY;
+      antiwindup_strat_.i_max = i_max;
+      antiwindup_strat_.i_min = i_min;
+      antiwindup_strat_.legacy_antiwindup = antiwindup;
+    }
+
+    /*!
    * \brief Constructor for passing in values.
    *
    * \param p The proportional gain.
@@ -289,10 +365,11 @@ public:
     : p_gain_(p),
       i_gain_(i),
       d_gain_(d),
-      u_max_(u_max),
-      u_min_(u_min),
       i_max_(antiwindup_strat.i_max),
       i_min_(antiwindup_strat.i_min),
+      u_max_(u_max),
+      u_min_(u_min),
+      antiwindup_(antiwindup_strat.legacy_antiwindup),
       antiwindup_strat_(antiwindup_strat)
     {
     }
@@ -321,6 +398,13 @@ public:
       return true;
     }
 
+    // Default constructor
+    [[deprecated(
+      "Use constructor with AntiWindupStrategy only. The default constructor might be deleted in "
+      "future")]] Gains()
+    {
+    }
+
     void print() const
     {
       std::cout << "Gains: p: " << p_gain_ << ", i: " << i_gain_ << ", d: " << d_gain_
@@ -337,8 +421,31 @@ public:
       -std::numeric_limits<double>::infinity(); /**< Minimum allowable integral term. */
     double u_max_ = std::numeric_limits<double>::infinity();  /**< Maximum allowable output. */
     double u_min_ = -std::numeric_limits<double>::infinity(); /**< Minimum allowable output. */
+    bool antiwindup_ = false;                                 /**< Anti-windup. */
     AntiWindupStrategy antiwindup_strat_;                     /**< Anti-windup strategy. */
   };
+
+  /*!
+   * \brief Constructor, zeros out Pid values when created and
+   *        initialize Pid-gains and integral term limits.
+   *
+   * \param p The proportional gain.
+   * \param i The integral gain.
+   * \param d The derivative gain.
+   * \param i_max Upper integral clamp.
+   * \param i_min Lower integral clamp.
+   * \param antiwindup Anti-windup functionality. When set to true, limits
+        the integral error to prevent windup; otherwise, constrains the
+        integral contribution to the control output. i_max and
+        i_min are applied in both scenarios.
+   *
+   * \throws An std::invalid_argument exception is thrown if i_min > i_max
+   */
+  [[deprecated("Use constructor with AntiWindupStrategy only.")]]
+  Pid(
+    double p = 0.0, double i = 0.0, double d = 0.0,
+    double i_max = std::numeric_limits<double>::infinity(),
+    double i_min = -std::numeric_limits<double>::infinity(), bool antiwindup = false);
 
   /*!
    * \brief Constructor, initialize Pid-gains and term limits.
@@ -355,10 +462,8 @@ public:
    * \throws An std::invalid_argument exception is thrown if u_min >= u_max.
    */
   Pid(
-    double p = 0.0, double i = 0.0, double d = 0.0,
-    double u_max = std::numeric_limits<double>::infinity(),
-    double u_min = -std::numeric_limits<double>::infinity(),
-    const AntiWindupStrategy & antiwindup_strat = AntiWindupStrategy());
+    double p, double i, double d, double u_max, double u_min,
+    const AntiWindupStrategy & antiwindup_strat);
 
   /*!
    * \brief Copy constructor required for preventing mutexes from being copied
@@ -370,6 +475,43 @@ public:
    * \brief Destructor of Pid class.
    */
   ~Pid();
+
+  /*!
+   * \brief Zeros out Pid values and initialize Pid-gains and term limits
+   *
+   * \param p The proportional gain.
+   * \param i The integral gain.
+   * \param d The derivative gain.
+   * \param i_max Upper integral clamp.
+   * \param i_min Lower integral clamp.
+   * \param antiwindup Anti-windup functionality. When set to true, limits
+        the integral error to prevent windup; otherwise, constrains the
+        integral contribution to the control output. i_max and
+        i_min are applied in both scenarios.
+   * \return True if all parameters are successfully set, False otherwise.
+   * \note New gains are not applied if i_min_ > i_max_
+   */
+  [[deprecated("Use initialize with AntiWindupStrategy instead.")]]
+  bool initialize(
+    double p, double i, double d, double i_max, double i_min, bool antiwindup = false);
+
+  /*!
+   * \brief Initialize Pid-gains and term limits
+   *
+   * \param p The proportional gain.
+   * \param i The integral gain.
+   * \param d The derivative gain.
+   * \param i_max Upper integral clamp.
+   * \param i_min Lower integral clamp.
+   * \param antiwindup Antiwindup functionality. When set to true, limits
+        the integral error to prevent windup; otherwise, constrains the
+        integral contribution to the control output. i_max and
+        i_min are applied in both scenarios.
+   *
+   * \note New gains are not applied if i_min_ > i_max_
+   */
+  [[deprecated("Use initialize() instead")]] void initPid(
+    double p, double i, double d, double i_max, double i_min, bool antiwindup = false);
 
   /*!
    * \brief Initialize Pid-gains and term limits.
@@ -384,7 +526,7 @@ public:
         tracking_time_constant parameter to tune the anti-windup behavior.
    * \return True if all parameters are successfully set, False otherwise.
    *
-   * \note New gains are not applied if antiwindup_strat.i_min > antiwindup_strat.i_max or u_min > u_max.
+   * \note New gains are not applied if i_min_ > i_max_ or u_min > u_max
    */
   bool initialize(
     double p, double i, double d, double u_max, double u_min,
@@ -407,6 +549,62 @@ public:
    * \brief Clear the saved integrator output of this controller
    */
   void clear_saved_iterm();
+
+  /*!
+   * \brief Get PID gains for the controller.
+   * \param p The proportional gain.
+   * \param i The integral gain.
+   * \param d The derivative gain.
+   * \param i_max Upper integral clamp.
+   * \param i_min Lower integral clamp.
+   *
+   * \note This method is not RT safe
+   */
+  void get_gains(double & p, double & i, double & d, double & i_max, double & i_min);
+
+  /*!
+   * \brief Get PID gains for the controller.
+   * \param p The proportional gain.
+   * \param i The integral gain.
+   * \param d The derivative gain.
+   * \param i_max Upper integral clamp.
+   * \param i_min Lower integral clamp.
+   */
+  [[deprecated("Use get_gains() instead")]] void getGains(
+    double & p, double & i, double & d, double & i_max, double & i_min);
+
+  /*!
+   * \brief Get PID gains for the controller.
+   * \param p The proportional gain.
+   * \param i The integral gain.
+   * \param d The derivative gain.
+   * \param i_max Upper integral clamp.
+   * \param i_min Lower integral clamp.
+   * \param antiwindup Anti-windup functionality. When set to true, limits
+        the integral error to prevent windup; otherwise, constrains the
+        integral contribution to the control output. i_max and
+        i_min are applied in both scenarios.
+   *
+   * \note This method is not RT safe
+   */
+  [[deprecated("Use get_gains overload with AntiWindupStrategy argument.")]]
+  void get_gains(
+    double & p, double & i, double & d, double & i_max, double & i_min, bool & antiwindup);
+
+  /*!
+   * \brief Get PID gains for the controller.
+   * \param p The proportional gain.
+   * \param i The integral gain.
+   * \param d The derivative gain.
+   * \param i_max Upper integral clamp.
+   * \param i_min Lower integral clamp.
+   * \param antiwindup Antiwindup functionality. When set to true, limits
+        the integral error to prevent windup; otherwise, constrains the
+        integral contribution to the control output. i_max and
+        i_min are applied in both scenarios.
+   */
+  [[deprecated("Use get_gains() instead")]] void getGains(
+    double & p, double & i, double & d, double & i_max, double & i_min, bool & antiwindup);
 
   /*!
    * \brief Get PID gains for the controller (preferred).
@@ -437,9 +635,53 @@ public:
    * \brief Get PID gains for the controller.
    * \return gains A struct of the PID gain values
    *
+   * \note This method is not RT safe
+   */
+  [[deprecated("Use get_gains() instead")]] Gains getGains();
+
+  /*!
+   * \brief Get PID gains for the controller.
+   * \return gains A struct of the PID gain values
+   *
    * \note This method can be called from the RT loop
    */
   Gains get_gains_rt() { return gains_; }
+
+  /*!
+   * \brief Set PID gains for the controller.
+   * \param p The proportional gain.
+   * \param i The integral gain.
+   * \param d The derivative gain.
+   * \param i_max Upper integral clamp.
+   * \param i_min Lower integral clamp.
+   * \param antiwindup Anti-windup functionality. When set to true, limits
+        the integral error to prevent windup; otherwise, constrains the
+        integral contribution to the control output. i_max and
+        i_min are applied in both scenarios.
+   * \return True if all parameters are successfully set, False otherwise.
+   *
+   * \note New gains are not applied if i_min > i_max
+   * \note This method is not RT safe
+   */
+  [[deprecated("Use set_gains with AntiWindupStrategy instead.")]]
+  bool set_gains(double p, double i, double d, double i_max, double i_min, bool antiwindup = false);
+
+  /*!
+   * \brief Set PID gains for the controller.
+   * \param p The proportional gain.
+   * \param i The integral gain.
+   * \param d The derivative gain.
+   * \param i_max Upper integral clamp.
+   * \param i_min Lower integral clamp.
+   * \param antiwindup Antiwindup functionality. When set to true, limits
+        the integral error to prevent windup; otherwise, constrains the
+        integral contribution to the control output. i_max and
+        i_min are applied in both scenarios.
+   *
+   * \note New gains are not applied if i_min > i_max
+   */
+  [[deprecated("Use set_gains() instead")]] void setGains(
+    double p, double i, double d, double i_max, double i_min, bool antiwindup = false);
 
   /*!
    * \brief Set PID gains for the controller.
@@ -454,7 +696,7 @@ public:
         tracking_time_constant parameter to tune the anti-windup behavior.
    * \return True if all parameters are successfully set, False otherwise.
    *
-   * \note New gains are not applied if antiwindup_strat.i_min > antiwindup_strat.i_max or u_min > u_max.
+   * \note New gains are not applied if i_min_ > i_max_ or u_min > u_max
    * \note This method is not RT safe
    */
   bool set_gains(
@@ -463,13 +705,21 @@ public:
 
   /*!
    * \brief Set PID gains for the controller.
-   * \param gains A struct of the PID gain values.
+   * \param gains A struct of the PID gain values
    * \return True if all parameters are successfully set, False otherwise.
    *
-   * \note New gains are not applied if gains.i_min_ > gains.i_max_ or gains.u_min_ > gains.u_max_
-   * \note This method is not RT safe.
+   * \note New gains are not applied if gains.i_min_ > gains.i_max_
+   * \note This method is not RT safe
    */
   bool set_gains(const Gains & gains);
+
+  /*!
+   * \brief Set PID gains for the controller.
+   * \param gains A struct of the PID gain values
+   *
+   * \note New gains are not applied if gains.i_min_ > gains.i_max_
+   */
+  [[deprecated("Use set_gains() instead")]] void setGains(const Gains & gains);
 
   /*!
    * \brief Set the PID error and compute the PID command with nonuniform time
@@ -477,11 +727,24 @@ public:
    * and the timestep \c dt_s.
    *
    * \param error  Error since last call (error = target - state)
-   * \param dt_s Change in time since last call in seconds.
+   * \param dt_s Change in time since last call in seconds
    *
    * \returns PID command
    */
   [[nodiscard]] double compute_command(double error, const double & dt_s);
+
+  /*!
+   * \brief Set the PID error and compute the PID command with nonuniform time
+   * step size. The derivative error is computed from the change in the error
+   * and the timestep \c dt.
+   *
+   * \param error  Error since last call (error = target - state)
+   * \param dt Change in time since last call in nanoseconds
+   *
+   * \returns PID command
+   */
+  [[deprecated("Use compute_command() instead")]] [[nodiscard]] double computeCommand(
+    double error, uint64_t dt);
 
   /*!
    * \brief Set the PID error and compute the PID command with nonuniform time
@@ -538,6 +801,20 @@ public:
    * derivative error.
    *
    * \param error Error since last call (error = target - state)
+   * \param error_dot d(Error)/(dt/1e9) since last call
+   * \param dt Change in time since last call in nanoseconds
+   *
+   * \returns PID command
+   */
+  [[deprecated("Use compute_command() instead")]] [[nodiscard]] double computeCommand(
+    double error, double error_dot, uint64_t dt);
+
+  /*!
+   * \brief Set the PID error and compute the PID command with nonuniform
+   * time step size. This also allows the user to pass in a precomputed
+   * derivative error.
+   *
+   * \param error Error since last call (error = target - state)
    * \param error_dot d(Error)/dt_ns since last call
    * \param dt_ns Change in time since last call, measured in nanoseconds.
    *
@@ -579,9 +856,24 @@ public:
   void set_current_cmd(double cmd);
 
   /*!
+   * \brief Set current command for this PID controller
+   */
+  [[deprecated("Use set_current_cmd() instead")]] void setCurrentCmd(double cmd);
+
+  /*!
    * \brief Return current command for this PID controller
    */
   double get_current_cmd();
+
+  /*!
+   * \brief Return current command for this PID controller
+   */
+  [[deprecated("Use get_current_cmd() instead")]] double getCurrentCmd();
+
+  /*!
+   * \brief Return derivative error
+   */
+  [[deprecated("Use get_current_pid_errors() instead")]] double getDerivativeError();
 
   /*!
    * \brief Return PID error terms for the controller.
@@ -590,6 +882,15 @@ public:
    * \param de  The derivative error.
    */
   void get_current_pid_errors(double & pe, double & ie, double & de);
+
+  /*!
+   * \brief Return PID error terms for the controller.
+   * \param pe  The proportional error.
+   * \param ie  The integral error.
+   * \param de  The derivative error.
+   */
+  [[deprecated("Use get_current_pid_errors() instead")]] void getCurrentPIDErrors(
+    double & pe, double & ie, double & de);
 
   /*!
    * @brief Custom assignment operator
