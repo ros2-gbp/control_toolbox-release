@@ -2,19 +2,25 @@
 Changelog for package control_toolbox
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-5.8.3 (2025-12-01)
+6.1.0 (2025-12-01)
 ------------------
-* Replace deprecated rclcpp::spin_some() (`#541 <https://github.com/ros-controls/control_toolbox/issues/541>`_) (`#542 <https://github.com/ros-controls/control_toolbox/issues/542>`_)
-* Contributors: mergify[bot]
+* Exponantial filter refactoring (`#493 <https://github.com/ros-controls/control_toolbox/issues/493>`_)
+* Replace deprecated rclcpp::spin_some() (`#541 <https://github.com/ros-controls/control_toolbox/issues/541>`_)
+* No need for the specialization of update() (`#509 <https://github.com/ros-controls/control_toolbox/issues/509>`_)
+* Contributors: Abdullah, Christoph Fröhlich, silanus
 
-5.8.2 (2025-10-16)
+6.0.0 (2025-10-16)
 ------------------
-* Add test for trc if i-gain is zero (`#526 <https://github.com/ros-controls/control_toolbox/issues/526>`_) (`#529 <https://github.com/ros-controls/control_toolbox/issues/529>`_)
-* Fix calculation of tracking time constant (`#511 <https://github.com/ros-controls/control_toolbox/issues/511>`_) (`#525 <https://github.com/ros-controls/control_toolbox/issues/525>`_)
+
+5.9.0 (2025-10-16)
+------------------
+* Add test for trc if i-gain is zero (`#526 <https://github.com/ros-controls/control_toolbox/issues/526>`_)
+* Fix calculation of tracking time constant (`#511 <https://github.com/ros-controls/control_toolbox/issues/511>`_)
+* Remove duplicate storage of limits (`#512 <https://github.com/ros-controls/control_toolbox/issues/512>`_)
 * Improve PID parameter validation (`#510 <https://github.com/ros-controls/control_toolbox/issues/510>`_)
 * [PidROS] Change args to const reference (`#513 <https://github.com/ros-controls/control_toolbox/issues/513>`_)
 * Fix -Wunused-result (`#506 <https://github.com/ros-controls/control_toolbox/issues/506>`_)
-* Contributors: Christoph Fröhlich, Sai Kishor Kothakota, mergify[bot]
+* Contributors: Christoph Fröhlich, Sai Kishor Kothakota, bijoua29
 
 5.8.1 (2025-10-05)
 ------------------
