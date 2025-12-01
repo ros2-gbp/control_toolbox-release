@@ -3,12 +3,21 @@
 
 name: Rolling - Semi-Binary Build
 on:
-  pull_request:
+  pull_request: &event
     branches:
-      - ros2-master
-  push:
-    branches:
-      - ros2-master
+      - master
+    paths:
+      - '**.hpp'
+      - '**.h'
+      - '**.cpp'
+      - '**.py'
+      - '**.yaml'
+      - '.github/workflows/rolling-semi-binary-build.yml'
+      - '**/package.xml'
+      - '**/CMakeLists.txt'
+      - 'control_toolbox.rolling.repos'
+      - '**.xml'
+  push: *event
   schedule:
     # Run every day to detect flakiness and broken dependencies
     - cron: '28 6 * * MON-FRI'
@@ -24,9 +33,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ROS_DISTRO: [kilted, rolling]
+        ROS_DISTRO: [rolling]
     with:
       ros_distro: ${{ matrix.ROS_DISTRO }}
       ros_repo: testing
       upstream_workspace: control_toolbox.${{ matrix.ROS_DISTRO }}.repos
-      ref_for_scheduled_build: ros2-master
+      ref_for_scheduled_build: master

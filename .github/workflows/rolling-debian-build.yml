@@ -3,7 +3,18 @@ on:
   workflow_dispatch:
   pull_request:
     branches:
-      - ros2-master
+      - master
+    paths:
+      - '**.hpp'
+      - '**.h'
+      - '**.cpp'
+      - '**.py'
+      - '**.yaml'
+      - '.github/workflows/rolling-debian-build.yml'
+      - '**/package.xml'
+      - '**/CMakeLists.txt'
+      - 'control_toolbox.rolling.repos'
+      - '**.xml'
   schedule:
     # Run every day to detect flakiness and broken dependencies
     - cron: '03 5 * * MON-FRI'
@@ -19,8 +30,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ROS_DISTRO: [kilted, rolling]
+        ROS_DISTRO: [rolling]
     with:
       ros_distro: ${{ matrix.ROS_DISTRO }}
       upstream_workspace: control_toolbox.${{ matrix.ROS_DISTRO }}.repos
-      ref_for_scheduled_build: ros2-master
+      ref_for_scheduled_build: master
