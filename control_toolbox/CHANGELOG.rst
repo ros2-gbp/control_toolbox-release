@@ -2,32 +2,25 @@
 Changelog for package control_toolbox
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-6.2.0 (2026-04-02)
+5.9.1 (2026-04-02)
 ------------------
-* Add string() methods to get the printable information (`#547 <https://github.com/ros-controls/control_toolbox/issues/547>`_)
-* Use tl_expected from libexpected-dev instead (`#572 <https://github.com/ros-controls/control_toolbox/issues/572>`_)
-* Fix BSD license text (`#563 <https://github.com/ros-controls/control_toolbox/issues/563>`_)
-* Contributors: Christoph Fröhlich, Sai Kishor Kothakota
+* Add string() methods to get the printable information (`#547 <https://github.com/ros-controls/control_toolbox/issues/547>`_) (`#584 <https://github.com/ros-controls/control_toolbox/issues/584>`_)
+* Use tl_expected from libexpected-dev instead (backport `#572 <https://github.com/ros-controls/control_toolbox/issues/572>`_) (`#582 <https://github.com/ros-controls/control_toolbox/issues/582>`_)
+* Contributors: mergify[bot]
 
-6.1.0 (2025-12-01)
+5.8.3 (2025-12-01)
 ------------------
-* Exponantial filter refactoring (`#493 <https://github.com/ros-controls/control_toolbox/issues/493>`_)
-* Replace deprecated rclcpp::spin_some() (`#541 <https://github.com/ros-controls/control_toolbox/issues/541>`_)
-* No need for the specialization of update() (`#509 <https://github.com/ros-controls/control_toolbox/issues/509>`_)
-* Contributors: Abdullah, Christoph Fröhlich, silanus
+* Replace deprecated rclcpp::spin_some() (`#541 <https://github.com/ros-controls/control_toolbox/issues/541>`_) (`#542 <https://github.com/ros-controls/control_toolbox/issues/542>`_)
+* Contributors: mergify[bot]
 
-6.0.0 (2025-10-16)
+5.8.2 (2025-10-16)
 ------------------
-
-5.9.0 (2025-10-16)
-------------------
-* Add test for trc if i-gain is zero (`#526 <https://github.com/ros-controls/control_toolbox/issues/526>`_)
-* Fix calculation of tracking time constant (`#511 <https://github.com/ros-controls/control_toolbox/issues/511>`_)
-* Remove duplicate storage of limits (`#512 <https://github.com/ros-controls/control_toolbox/issues/512>`_)
+* Add test for trc if i-gain is zero (`#526 <https://github.com/ros-controls/control_toolbox/issues/526>`_) (`#529 <https://github.com/ros-controls/control_toolbox/issues/529>`_)
+* Fix calculation of tracking time constant (`#511 <https://github.com/ros-controls/control_toolbox/issues/511>`_) (`#525 <https://github.com/ros-controls/control_toolbox/issues/525>`_)
 * Improve PID parameter validation (`#510 <https://github.com/ros-controls/control_toolbox/issues/510>`_)
 * [PidROS] Change args to const reference (`#513 <https://github.com/ros-controls/control_toolbox/issues/513>`_)
 * Fix -Wunused-result (`#506 <https://github.com/ros-controls/control_toolbox/issues/506>`_)
-* Contributors: Christoph Fröhlich, Sai Kishor Kothakota, bijoua29
+* Contributors: Christoph Fröhlich, Sai Kishor Kothakota, mergify[bot]
 
 5.8.1 (2025-10-05)
 ------------------
