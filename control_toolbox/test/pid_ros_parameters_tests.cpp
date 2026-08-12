@@ -21,6 +21,9 @@
 #include "rclcpp/parameter.hpp"
 #include "rclcpp/utilities.hpp"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 using control_toolbox::AntiWindupStrategy;
 using rclcpp::executors::MultiThreadedExecutor;
 
@@ -55,11 +58,13 @@ void check_set_parameters(
   const double U_MIN = -10.0;
   const double TRK_TC = 4.0;
   const bool SATURATION = true;
+  const bool ANTIWINDUP = true;
   AntiWindupStrategy ANTIWINDUP_STRAT;
-  ANTIWINDUP_STRAT.type = AntiWindupStrategy::NONE;
+  ANTIWINDUP_STRAT.type = AntiWindupStrategy::LEGACY;
   ANTIWINDUP_STRAT.i_max = I_MAX;
   ANTIWINDUP_STRAT.i_min = I_MIN;
   ANTIWINDUP_STRAT.tracking_time_constant = TRK_TC;
+  ANTIWINDUP_STRAT.legacy_antiwindup = ANTIWINDUP;
   const bool SAVE_I_TERM = true;
 
   ASSERT_NO_THROW(pid.initialize_from_args(P, I, D, U_MAX, U_MIN, ANTIWINDUP_STRAT, SAVE_I_TERM));
@@ -94,6 +99,9 @@ void check_set_parameters(
   ASSERT_TRUE(node->get_parameter(prefix + "saturation", param));
   ASSERT_EQ(param.get_value<bool>(), SATURATION);
 
+  ASSERT_TRUE(node->get_parameter(prefix + "antiwindup", param));
+  ASSERT_EQ(param.get_value<bool>(), ANTIWINDUP);
+
   ASSERT_TRUE(node->get_parameter(prefix + "antiwindup_strategy", param));
   ASSERT_EQ(param.get_value<std::string>(), ANTIWINDUP_STRAT.to_string());
 
@@ -110,7 +118,8 @@ void check_set_parameters(
   ASSERT_EQ(gains.u_max_, U_MAX);
   ASSERT_EQ(gains.u_min_, U_MIN);
   ASSERT_EQ(gains.antiwindup_strat_.tracking_time_constant, TRK_TC);
-  ASSERT_EQ(gains.antiwindup_strat_, AntiWindupStrategy::NONE);
+  ASSERT_TRUE(gains.antiwindup_);
+  ASSERT_EQ(gains.antiwindup_strat_, AntiWindupStrategy::LEGACY);
 }
 
 TEST(PidParametersTest, InitPid_no_prefix)
@@ -141,10 +150,11 @@ TEST(PidParametersTest, InitPidTestBadParameter)
   const double TRK_TC = 4.0;
 
   AntiWindupStrategy ANTIWINDUP_STRAT;
-  ANTIWINDUP_STRAT.type = AntiWindupStrategy::NONE;
+  ANTIWINDUP_STRAT.type = AntiWindupStrategy::LEGACY;
   ANTIWINDUP_STRAT.i_max = I_MAX_BAD;
   ANTIWINDUP_STRAT.i_min = I_MIN_BAD;
   ANTIWINDUP_STRAT.tracking_time_constant = TRK_TC;
+  ANTIWINDUP_STRAT.legacy_antiwindup = false;
 
   bool ret;
   ASSERT_NO_THROW(
@@ -163,6 +173,7 @@ TEST(PidParametersTest, InitPidTestBadParameter)
   ASSERT_FALSE(node->get_parameter("u_clamp_min", param));
   ASSERT_FALSE(node->get_parameter("tracking_time_constant", param));
   ASSERT_FALSE(node->get_parameter("saturation", param));
+  ASSERT_FALSE(node->get_parameter("antiwindup", param));
   ASSERT_FALSE(node->get_parameter("antiwindup_strategy", param));
 
   // check gains were NOT set
@@ -175,7 +186,8 @@ TEST(PidParametersTest, InitPidTestBadParameter)
   ASSERT_EQ(gains.u_max_, std::numeric_limits<double>::infinity());
   ASSERT_EQ(gains.u_min_, -std::numeric_limits<double>::infinity());
   ASSERT_EQ(gains.antiwindup_strat_.tracking_time_constant, 0.0);
-  ASSERT_EQ(gains.antiwindup_strat_, AntiWindupStrategy::NONE);
+  ASSERT_FALSE(gains.antiwindup_);
+  ASSERT_EQ(gains.antiwindup_strat_, AntiWindupStrategy::LEGACY);
 
   // Try other invalid combinations
   ANTIWINDUP_STRAT.i_max = 10.;
@@ -240,9 +252,6 @@ TEST(PidParametersTest, SetParametersTest)
 {
   rclcpp::Node::SharedPtr node = std::make_shared<rclcpp::Node>("pid_parameters_test");
 
-  rclcpp::executors::SingleThreadedExecutor executor;
-  executor.add_node(node);
-
   TestablePidROS pid(node, "", "", false);
 
   const double P = 1.0;
@@ -254,11 +263,13 @@ TEST(PidParametersTest, SetParametersTest)
   const double U_MIN = -10.0;
   const double TRK_TC = 4.0;
   const bool SATURATION = true;
+  const bool ANTIWINDUP = true;
   AntiWindupStrategy ANTIWINDUP_STRAT;
-  ANTIWINDUP_STRAT.type = AntiWindupStrategy::NONE;
+  ANTIWINDUP_STRAT.type = AntiWindupStrategy::LEGACY;
   ANTIWINDUP_STRAT.i_max = I_MAX;
   ANTIWINDUP_STRAT.i_min = I_MIN;
   ANTIWINDUP_STRAT.tracking_time_constant = TRK_TC;
+  ANTIWINDUP_STRAT.legacy_antiwindup = ANTIWINDUP;
   const bool SAVE_I_TERM = false;
 
   pid.initialize_from_args(P, I, D, U_MAX, U_MIN, ANTIWINDUP_STRAT, SAVE_I_TERM);
@@ -289,6 +300,8 @@ TEST(PidParametersTest, SetParametersTest)
   ASSERT_TRUE(set_result.successful);
   ASSERT_NO_THROW(set_result = node->set_parameter(rclcpp::Parameter("saturation", SATURATION)));
   ASSERT_TRUE(set_result.successful);
+  ASSERT_NO_THROW(set_result = node->set_parameter(rclcpp::Parameter("antiwindup", ANTIWINDUP)));
+  ASSERT_TRUE(set_result.successful);
   ASSERT_NO_THROW(
     set_result = node->set_parameter(rclcpp::Parameter("antiwindup_strategy", ANTIWINDUP_STRAT)));
   ASSERT_TRUE(set_result.successful);
@@ -298,7 +311,8 @@ TEST(PidParametersTest, SetParametersTest)
     set_result = node->set_parameter(rclcpp::Parameter("activate_state_publisher", true)));
   ASSERT_TRUE(set_result.successful);
 
-  executor.spin_some();
+  // process callbacks
+  rclcpp::spin_some(node->get_node_base_interface());
 
   // check gains were set using the parameters
   control_toolbox::Pid::Gains gains = pid.get_gains();
@@ -310,15 +324,13 @@ TEST(PidParametersTest, SetParametersTest)
   ASSERT_EQ(gains.u_max_, U_MAX);
   ASSERT_EQ(gains.u_min_, U_MIN);
   ASSERT_EQ(gains.antiwindup_strat_.tracking_time_constant, TRK_TC);
-  ASSERT_EQ(gains.antiwindup_strat_, AntiWindupStrategy::NONE);
+  ASSERT_EQ(gains.antiwindup_, ANTIWINDUP);
+  ASSERT_EQ(gains.antiwindup_strat_, AntiWindupStrategy::LEGACY);
 }
 
 TEST(PidParametersTest, SetBadParametersTest)
 {
   rclcpp::Node::SharedPtr node = std::make_shared<rclcpp::Node>("pid_parameters_test");
-
-  rclcpp::executors::SingleThreadedExecutor executor;
-  executor.add_node(node);
 
   TestablePidROS pid(node, "", "", false);
 
@@ -335,12 +347,14 @@ TEST(PidParametersTest, SetBadParametersTest)
   const double U_MIN_BAD = 20.0;
   const double TRK_TC = 4.0;
   const bool SATURATION = false;
+  const bool ANTIWINDUP = true;
 
   AntiWindupStrategy ANTIWINDUP_STRAT;
-  ANTIWINDUP_STRAT.type = AntiWindupStrategy::NONE;
+  ANTIWINDUP_STRAT.type = AntiWindupStrategy::LEGACY;
   ANTIWINDUP_STRAT.i_max = I_MAX;
   ANTIWINDUP_STRAT.i_min = I_MIN;
   ANTIWINDUP_STRAT.tracking_time_constant = TRK_TC;
+  ANTIWINDUP_STRAT.legacy_antiwindup = ANTIWINDUP;
 
   pid.initialize_from_args(P, I, D, U_MAX, U_MIN, ANTIWINDUP_STRAT, false);
 
@@ -370,12 +384,14 @@ TEST(PidParametersTest, SetBadParametersTest)
   ASSERT_TRUE(set_result.successful);
   ASSERT_NO_THROW(set_result = node->set_parameter(rclcpp::Parameter("saturation", SATURATION)));
   ASSERT_TRUE(set_result.successful);
+  ASSERT_NO_THROW(set_result = node->set_parameter(rclcpp::Parameter("antiwindup", ANTIWINDUP)));
+  ASSERT_TRUE(set_result.successful);
   ASSERT_NO_THROW(
     set_result = node->set_parameter(rclcpp::Parameter("antiwindup_strategy", ANTIWINDUP_STRAT)));
   ASSERT_TRUE(set_result.successful);
 
   // process callbacks
-  executor.spin_some();
+  rclcpp::spin_some(node->get_node_base_interface());
 
   // check gains were NOT set using the parameters but the u_max and u_min
   // were set to infinity as saturation is false
@@ -388,7 +404,8 @@ TEST(PidParametersTest, SetBadParametersTest)
   ASSERT_EQ(gains.u_max_, std::numeric_limits<double>::infinity());
   ASSERT_EQ(gains.u_min_, -std::numeric_limits<double>::infinity());
   ASSERT_EQ(gains.antiwindup_strat_.tracking_time_constant, TRK_TC);
-  ASSERT_EQ(gains.antiwindup_strat_, AntiWindupStrategy::NONE);
+  ASSERT_EQ(gains.antiwindup_, ANTIWINDUP);
+  ASSERT_EQ(gains.antiwindup_strat_, AntiWindupStrategy::LEGACY);
 
   // Set the good gains
 
@@ -398,7 +415,7 @@ TEST(PidParametersTest, SetBadParametersTest)
   ASSERT_TRUE(set_result.successful);
 
   // process callbacks
-  executor.spin_some();
+  rclcpp::spin_some(node->get_node_base_interface());
 
   // Setting good gains doesn't help, as the saturation is still false
   gains = pid.get_gains();
@@ -410,14 +427,15 @@ TEST(PidParametersTest, SetBadParametersTest)
   ASSERT_EQ(gains.u_max_, std::numeric_limits<double>::infinity());
   ASSERT_EQ(gains.u_min_, -std::numeric_limits<double>::infinity());
   ASSERT_EQ(gains.antiwindup_strat_.tracking_time_constant, TRK_TC);
-  ASSERT_EQ(gains.antiwindup_strat_, AntiWindupStrategy::NONE);
+  ASSERT_EQ(gains.antiwindup_, ANTIWINDUP);
+  ASSERT_EQ(gains.antiwindup_strat_, AntiWindupStrategy::LEGACY);
 
   // Now re-enabling it should have the old gains back
   ASSERT_NO_THROW(set_result = node->set_parameter(rclcpp::Parameter("saturation", true)));
   ASSERT_TRUE(set_result.successful);
 
   // process callbacks
-  executor.spin_some();
+  rclcpp::spin_some(node->get_node_base_interface());
 
   // check gains were NOT set using the parameters
   control_toolbox::Pid::Gains updated_gains = pid.get_gains();
@@ -429,7 +447,8 @@ TEST(PidParametersTest, SetBadParametersTest)
   ASSERT_EQ(updated_gains.u_max_, U_MAX);
   ASSERT_EQ(updated_gains.u_min_, U_MIN);
   ASSERT_EQ(updated_gains.antiwindup_strat_.tracking_time_constant, TRK_TC);
-  ASSERT_EQ(updated_gains.antiwindup_strat_, AntiWindupStrategy::NONE);
+  ASSERT_EQ(updated_gains.antiwindup_, ANTIWINDUP);
+  ASSERT_EQ(updated_gains.antiwindup_strat_, AntiWindupStrategy::LEGACY);
 }
 
 TEST(PidParametersTest, GetParametersTest)
@@ -448,12 +467,14 @@ TEST(PidParametersTest, GetParametersTest)
     const double U_MIN = -10.0;
     const double TRK_TC = 4.0;
     const bool SATURATION = true;
+    const bool ANTIWINDUP = true;
 
     AntiWindupStrategy ANTIWINDUP_STRAT;
-    ANTIWINDUP_STRAT.type = AntiWindupStrategy::NONE;
+    ANTIWINDUP_STRAT.type = AntiWindupStrategy::LEGACY;
     ANTIWINDUP_STRAT.i_max = I_MAX;
     ANTIWINDUP_STRAT.i_min = I_MIN;
     ANTIWINDUP_STRAT.tracking_time_constant = TRK_TC;
+    ANTIWINDUP_STRAT.legacy_antiwindup = ANTIWINDUP;
 
     ASSERT_FALSE(pid.initialize_from_args(0.0, 0.0, 0.0, 0.0, 0.0, ANTIWINDUP_STRAT, false))
       << "Zero u_min and u_max are not valid so initialization should fail";
@@ -490,6 +511,9 @@ TEST(PidParametersTest, GetParametersTest)
     ASSERT_TRUE(node->get_parameter("saturation", param));
     ASSERT_EQ(param.get_value<bool>(), SATURATION);
 
+    ASSERT_TRUE(node->get_parameter("antiwindup", param));
+    ASSERT_EQ(param.get_value<bool>(), ANTIWINDUP);
+
     ASSERT_TRUE(node->get_parameter("antiwindup_strategy", param));
     ASSERT_EQ(param.get_value<std::string>(), ANTIWINDUP_STRAT.to_string());
 
@@ -512,12 +536,14 @@ TEST(PidParametersTest, GetParametersTest)
     const double U_MAX = 10.0;
     const double U_MIN = -10.0;
     const double TRK_TC = 4.0;
+    const bool ANTIWINDUP = true;
 
     AntiWindupStrategy ANTIWINDUP_STRAT;
-    ANTIWINDUP_STRAT.type = AntiWindupStrategy::NONE;
+    ANTIWINDUP_STRAT.type = AntiWindupStrategy::LEGACY;
     ANTIWINDUP_STRAT.i_max = I_MAX;
     ANTIWINDUP_STRAT.i_min = I_MIN;
     ANTIWINDUP_STRAT.tracking_time_constant = TRK_TC;
+    ANTIWINDUP_STRAT.legacy_antiwindup = ANTIWINDUP;
 
     ASSERT_TRUE(pid.initialize_from_args(P, I, D, U_MAX, U_MIN, ANTIWINDUP_STRAT, false));
 
@@ -538,12 +564,14 @@ TEST(PidParametersTest, GetParametersTest)
     const double U_MAX = std::numeric_limits<double>::infinity();
     const double U_MIN = -std::numeric_limits<double>::infinity();
     const double TRK_TC = 4.0;
+    const bool ANTIWINDUP = true;
 
     AntiWindupStrategy ANTIWINDUP_STRAT;
-    ANTIWINDUP_STRAT.type = AntiWindupStrategy::NONE;
+    ANTIWINDUP_STRAT.type = AntiWindupStrategy::LEGACY;
     ANTIWINDUP_STRAT.i_max = I_MAX;
     ANTIWINDUP_STRAT.i_min = I_MIN;
     ANTIWINDUP_STRAT.tracking_time_constant = TRK_TC;
+    ANTIWINDUP_STRAT.legacy_antiwindup = ANTIWINDUP;
 
     ASSERT_FALSE(pid.initialize_from_args(0.0, 0.0, 0.0, 0.0, 0.0, ANTIWINDUP_STRAT, false))
       << "Zero u_min and u_max are not valid so initialization should fail";
@@ -579,6 +607,9 @@ TEST(PidParametersTest, GetParametersTest)
     ASSERT_TRUE(node->get_parameter("saturation", param));
     ASSERT_TRUE(param.get_value<bool>()) << "Should be enabled by default!";
 
+    ASSERT_TRUE(node->get_parameter("antiwindup", param));
+    ASSERT_EQ(param.get_value<bool>(), ANTIWINDUP);
+
     ASSERT_TRUE(node->get_parameter("antiwindup_strategy", param));
     ASSERT_EQ(param.get_value<std::string>(), ANTIWINDUP_STRAT.to_string());
 
@@ -609,11 +640,11 @@ TEST(PidParametersTest, GetParametersFromParams)
 
   rclcpp::Parameter param_i_clamp_max;
   ASSERT_TRUE(node->get_parameter("i_clamp_max", param_i_clamp_max));
-  EXPECT_TRUE(std::isinf(param_i_clamp_max.get_value<double>()));
+  EXPECT_FALSE(std::isfinite(param_i_clamp_max.get_value<double>()));
 
   rclcpp::Parameter param_i_clamp_min;
   ASSERT_TRUE(node->get_parameter("i_clamp_min", param_i_clamp_min));
-  EXPECT_TRUE(std::isinf(param_i_clamp_min.get_value<double>()));
+  EXPECT_FALSE(std::isfinite(param_i_clamp_min.get_value<double>()));
 
   rclcpp::Parameter param_u_clamp_max;
   ASSERT_TRUE(node->get_parameter("u_clamp_max", param_u_clamp_max));
@@ -904,10 +935,11 @@ TEST(PidParametersTest, MultiplePidInstances)
   const double U_MIN = -10.0;
   const double TRK_TC = 4.0;
   AntiWindupStrategy ANTIWINDUP_STRAT;
-  ANTIWINDUP_STRAT.type = AntiWindupStrategy::NONE;
+  ANTIWINDUP_STRAT.type = AntiWindupStrategy::LEGACY;
   ANTIWINDUP_STRAT.i_max = I_MAX;
   ANTIWINDUP_STRAT.i_min = I_MIN;
   ANTIWINDUP_STRAT.tracking_time_constant = TRK_TC;
+  ANTIWINDUP_STRAT.legacy_antiwindup = false;
 
   ASSERT_NO_THROW(pid_1.initialize_from_args(P, I, D, U_MAX, U_MIN, ANTIWINDUP_STRAT, false));
   ASSERT_NO_THROW(pid_2.initialize_from_args(2 * P, I, D, U_MAX, U_MIN, ANTIWINDUP_STRAT, false));
@@ -927,3 +959,5 @@ int main(int argc, char ** argv)
   rclcpp::shutdown();
   return result;
 }
+
+#pragma GCC diagnostic pop

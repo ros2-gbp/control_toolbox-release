@@ -27,6 +27,9 @@
 #include "rclcpp/utilities.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 using control_toolbox::AntiWindupStrategy;
 using PidStateMsg = control_msgs::msg::PidState;
 using rclcpp::executors::MultiThreadedExecutor;
@@ -38,15 +41,13 @@ TEST(PidPublisherTest, PublishTest)
 
   auto node = std::make_shared<rclcpp::Node>("pid_publisher_test");
 
-  rclcpp::executors::SingleThreadedExecutor executor;
-  executor.add_node(node);
-
   control_toolbox::PidROS pid_ros = control_toolbox::PidROS(node, "", "", true);
 
   AntiWindupStrategy antiwindup_strat;
-  antiwindup_strat.type = AntiWindupStrategy::NONE;
+  antiwindup_strat.type = AntiWindupStrategy::LEGACY;
   antiwindup_strat.i_max = 5.0;
   antiwindup_strat.i_min = -5.0;
+  antiwindup_strat.legacy_antiwindup = false;
   antiwindup_strat.tracking_time_constant = 1.0;
   pid_ros.initialize_from_args(1.0, 1.0, 1.0, 5.0, -5.0, antiwindup_strat, false);
 
@@ -63,13 +64,13 @@ TEST(PidPublisherTest, PublishTest)
     "/pid_state", rclcpp::SensorDataQoS(), state_callback);
 
   double command = pid_ros.compute_command(-0.5, rclcpp::Duration(1, 0));
-  EXPECT_EQ(-1.0, command);
+  EXPECT_EQ(-1.5, command);
 
   // wait for callback
   for (size_t i = 0; i < ATTEMPTS && !callback_called; ++i)
   {
     pid_ros.compute_command(-0.5, rclcpp::Duration(1, 0));
-    executor.spin_some();
+    rclcpp::spin_some(node);
     std::this_thread::sleep_for(DELAY);
   }
 
@@ -85,15 +86,13 @@ TEST(PidPublisherTest, PublishTest_start_deactivated)
 
   auto node = std::make_shared<rclcpp::Node>("pid_publisher_test");
 
-  rclcpp::executors::SingleThreadedExecutor executor;
-  executor.add_node(node);
-
   control_toolbox::PidROS pid_ros = control_toolbox::PidROS(node, "", "", false);
 
   AntiWindupStrategy antiwindup_strat;
-  antiwindup_strat.type = AntiWindupStrategy::NONE;
+  antiwindup_strat.type = AntiWindupStrategy::LEGACY;
   antiwindup_strat.i_max = 5.0;
   antiwindup_strat.i_min = -5.0;
+  antiwindup_strat.legacy_antiwindup = false;
   antiwindup_strat.tracking_time_constant = 1.0;
   pid_ros.initialize_from_args(1.0, 1.0, 1.0, 5.0, -5.0, antiwindup_strat, false);
 
@@ -110,13 +109,13 @@ TEST(PidPublisherTest, PublishTest_start_deactivated)
     "/pid_state", rclcpp::SensorDataQoS(), state_callback);
 
   double command = pid_ros.compute_command(-0.5, rclcpp::Duration(1, 0));
-  EXPECT_EQ(-1.0, command);
+  EXPECT_EQ(-1.5, command);
 
   // wait for callback
   for (size_t i = 0; i < ATTEMPTS && !callback_called; ++i)
   {
     pid_ros.compute_command(-0.5, rclcpp::Duration(1, 0));
-    executor.spin_some();
+    rclcpp::spin_some(node);
     std::this_thread::sleep_for(DELAY);
   }
   ASSERT_FALSE(callback_called);
@@ -132,7 +131,7 @@ TEST(PidPublisherTest, PublishTest_start_deactivated)
   for (size_t i = 0; i < ATTEMPTS && !callback_called; ++i)
   {
     pid_ros.compute_command(-0.5, rclcpp::Duration(1, 0));
-    executor.spin_some();
+    rclcpp::spin_some(node);
     std::this_thread::sleep_for(DELAY);
   }
   ASSERT_TRUE(callback_called);
@@ -141,7 +140,7 @@ TEST(PidPublisherTest, PublishTest_start_deactivated)
   ASSERT_NO_THROW(
     set_result = node->set_parameter(rclcpp::Parameter("activate_state_publisher", false)));
   ASSERT_TRUE(set_result.successful);
-  executor.spin_some();  // process callbacks to ensure that no further messages are received
+  rclcpp::spin_some(node);  // process callbacks to ensure that no further messages are received
   callback_called = false;
   last_state_msg.reset();
 
@@ -149,7 +148,7 @@ TEST(PidPublisherTest, PublishTest_start_deactivated)
   for (size_t i = 0; i < ATTEMPTS && !callback_called; ++i)
   {
     pid_ros.compute_command(-0.5, rclcpp::Duration(1, 0));
-    executor.spin_some();
+    rclcpp::spin_some(node);
     std::this_thread::sleep_for(DELAY);
   }
   ASSERT_FALSE(callback_called);
@@ -163,16 +162,14 @@ TEST(PidPublisherTest, PublishTest_prefix)
 
   auto node = std::make_shared<rclcpp::Node>("pid_publisher_test");
 
-  rclcpp::executors::SingleThreadedExecutor executor;
-  executor.add_node(node);
-
   // test with a prefix for the topic without trailing / (should be auto-added)
   control_toolbox::PidROS pid_ros = control_toolbox::PidROS(node, "", "global", true);
 
   AntiWindupStrategy antiwindup_strat;
-  antiwindup_strat.type = AntiWindupStrategy::NONE;
+  antiwindup_strat.type = AntiWindupStrategy::LEGACY;
   antiwindup_strat.i_max = 5.0;
   antiwindup_strat.i_min = -5.0;
+  antiwindup_strat.legacy_antiwindup = false;
   antiwindup_strat.tracking_time_constant = 1.0;
   pid_ros.initialize_from_args(1.0, 1.0, 1.0, 5.0, -5.0, antiwindup_strat, false);
 
@@ -189,13 +186,13 @@ TEST(PidPublisherTest, PublishTest_prefix)
     "/global/pid_state", rclcpp::SensorDataQoS(), state_callback);
 
   double command = pid_ros.compute_command(-0.5, rclcpp::Duration(1, 0));
-  EXPECT_EQ(-1.0, command);
+  EXPECT_EQ(-1.5, command);
 
   // wait for callback
   for (size_t i = 0; i < ATTEMPTS && !callback_called; ++i)
   {
     pid_ros.compute_command(-0.5, rclcpp::Duration(1, 0));
-    executor.spin_some();
+    rclcpp::spin_some(node);
     std::this_thread::sleep_for(DELAY);
   }
 
@@ -211,15 +208,13 @@ TEST(PidPublisherTest, PublishTest_local_prefix)
 
   auto node = std::make_shared<rclcpp::Node>("pid_publisher_test");
 
-  rclcpp::executors::SingleThreadedExecutor executor;
-  executor.add_node(node);
-
   control_toolbox::PidROS pid_ros = control_toolbox::PidROS(node, "", "~/local/", true);
 
   AntiWindupStrategy antiwindup_strat;
-  antiwindup_strat.type = AntiWindupStrategy::NONE;
+  antiwindup_strat.type = AntiWindupStrategy::LEGACY;
   antiwindup_strat.i_max = 5.0;
   antiwindup_strat.i_min = -5.0;
+  antiwindup_strat.legacy_antiwindup = false;
   antiwindup_strat.tracking_time_constant = 1.0;
   pid_ros.initialize_from_args(1.0, 1.0, 1.0, 5.0, -5.0, antiwindup_strat, false);
 
@@ -236,13 +231,13 @@ TEST(PidPublisherTest, PublishTest_local_prefix)
     "~/local/pid_state", rclcpp::SensorDataQoS(), state_callback);
 
   double command = pid_ros.compute_command(-0.5, rclcpp::Duration(1, 0));
-  EXPECT_EQ(-1.0, command);
+  EXPECT_EQ(-1.5, command);
 
   // wait for callback
   for (size_t i = 0; i < ATTEMPTS && !callback_called; ++i)
   {
     pid_ros.compute_command(-0.5, rclcpp::Duration(1, 0));
-    executor.spin_some();
+    rclcpp::spin_some(node);
     std::this_thread::sleep_for(DELAY);
   }
 
@@ -314,9 +309,6 @@ TEST(PidPublisherTest, PublishTestLifecycle)
 
   auto node = std::make_shared<rclcpp_lifecycle::LifecycleNode>("pid_publisher_test");
 
-  rclcpp::executors::SingleThreadedExecutor executor;
-  executor.add_node(node->get_node_base_interface());
-
   control_toolbox::PidROS pid_ros(node, "", "", true);
 
   auto state_pub_lifecycle_ =
@@ -324,9 +316,10 @@ TEST(PidPublisherTest, PublishTestLifecycle)
       pid_ros.get_pid_state_publisher());
 
   AntiWindupStrategy antiwindup_strat;
-  antiwindup_strat.type = AntiWindupStrategy::NONE;
+  antiwindup_strat.type = AntiWindupStrategy::LEGACY;
   antiwindup_strat.i_max = 5.0;
   antiwindup_strat.i_min = -5.0;
+  antiwindup_strat.legacy_antiwindup = false;
   antiwindup_strat.tracking_time_constant = 1.0;
   pid_ros.initialize_from_args(1.0, 1.0, 1.0, 5.0, -5.0, antiwindup_strat, false);
 
@@ -343,13 +336,13 @@ TEST(PidPublisherTest, PublishTestLifecycle)
     "/pid_state", rclcpp::SensorDataQoS(), state_callback);
 
   double command = pid_ros.compute_command(-0.5, rclcpp::Duration(1, 0));
-  EXPECT_EQ(-1.0, command);
+  EXPECT_EQ(-1.5, command);
 
   // wait for callback
   for (size_t i = 0; i < ATTEMPTS && !callback_called; ++i)
   {
     pid_ros.compute_command(-0.5, rclcpp::Duration(1, 0));
-    executor.spin_some();
+    rclcpp::spin_some(node->get_node_base_interface());
     std::this_thread::sleep_for(DELAY);
   }
   ASSERT_TRUE(callback_called);
@@ -367,3 +360,5 @@ int main(int argc, char ** argv)
   rclcpp::shutdown();
   return result;
 }
+
+#pragma GCC diagnostic pop

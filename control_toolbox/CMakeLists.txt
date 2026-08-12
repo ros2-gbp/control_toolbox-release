@@ -19,6 +19,7 @@ endif()
 
 set(THIS_PACKAGE_INCLUDE_DEPENDS
   control_msgs
+  fmt
   rclcpp
   rcl_interfaces
   rcutils
