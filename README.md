@@ -1,3 +1,26 @@
+## control_toolbox (kilted) - 5.10.1-1
+
+The packages in the `control_toolbox` repository were released into the `kilted` distro by running `/usr/bin/bloom-release -r kilted control_toolbox -y` on `Wed, 12 Aug 2026 16:19:31 -0000`
+
+The `control_toolbox` package was released.
+
+Version of package(s) in repository `control_toolbox`:
+
+- upstream repository: https://github.com/ros-controls/control_toolbox.git
+- release repository: https://github.com/ros2-gbp/control_toolbox-release.git
+- rosdistro version: `5.10.0-1`
+- old version: `5.10.0-1`
+- new version: `5.10.1-1`
+
+Versions of tools used:
+
+- bloom version: `0.14.3`
+- catkin_pkg version: `1.1.0`
+- rosdep version: `0.26.0`
+- rosdistro version: `1.0.1`
+- vcstools version: `0.1.42`
+
+
 ## control_toolbox (lyrical) - 6.4.0-1
 
 The packages in the `control_toolbox` repository were released into the `lyrical` distro by running `/usr/bin/bloom-release -r lyrical control_toolbox -y` on `Wed, 12 Aug 2026 16:17:37 -0000`
