@@ -2,43 +2,51 @@
 Changelog for package control_toolbox
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-5.11.0 (2026-11-01)
--------------------
-* Add configure() overload to set the initial LPF state (`#657 <https://github.com/ros-controls/control_toolbox/issues/657>`_) (`#662 <https://github.com/ros-controls/control_toolbox/issues/662>`_)
-* Add <fmt/format.h> for fmt 11+ compatibility (`#658 <https://github.com/ros-controls/control_toolbox/issues/658>`_) (`#661 <https://github.com/ros-controls/control_toolbox/issues/661>`_)
-* Contributors: mergify[bot]
-
-5.10.1 (2026-08-12)
--------------------
-* Fix race condition with tf buffer (`#654 <https://github.com/ros-controls/control_toolbox/issues/654>`_) (`#656 <https://github.com/ros-controls/control_toolbox/issues/656>`_)
-* Fix testcase for invalid value at node initialization (`#615 <https://github.com/ros-controls/control_toolbox/issues/615>`_) (`#632 <https://github.com/ros-controls/control_toolbox/issues/632>`_)
-* Define _USE_MATH_DEFINES for each target that links control_toolbox on WIN32 (`#616 <https://github.com/ros-controls/control_toolbox/issues/616>`_) (`#619 <https://github.com/ros-controls/control_toolbox/issues/619>`_)
-* Contributors: mergify[bot]
-
-5.10.0 (2026-04-17)
--------------------
-* RateLimiter: Don't update parameters before input checks (backport `#554 <https://github.com/ros-controls/control_toolbox/issues/554>`_) (`#594 <https://github.com/ros-controls/control_toolbox/issues/594>`_)
-* Contributors: mergify[bot]
-
-5.9.1 (2026-04-02)
+6.5.0 (2026-11-01)
 ------------------
-* Add string() methods to get the printable information (`#547 <https://github.com/ros-controls/control_toolbox/issues/547>`_) (`#584 <https://github.com/ros-controls/control_toolbox/issues/584>`_)
-* Use tl_expected from libexpected-dev instead (backport `#572 <https://github.com/ros-controls/control_toolbox/issues/572>`_) (`#582 <https://github.com/ros-controls/control_toolbox/issues/582>`_)
-* Contributors: mergify[bot]
+* Add configure() overload to set the initial LPF state (`#657 <https://github.com/ros-controls/control_toolbox/issues/657>`_)
+* Add <fmt/format.h> for fmt 11+ compatibility (`#658 <https://github.com/ros-controls/control_toolbox/issues/658>`_)
+* Contributors: David Moli, Dhruv Patel
 
-5.8.3 (2025-12-01)
+6.4.0 (2026-08-12)
 ------------------
-* Replace deprecated rclcpp::spin_some() (`#541 <https://github.com/ros-controls/control_toolbox/issues/541>`_) (`#542 <https://github.com/ros-controls/control_toolbox/issues/542>`_)
-* Contributors: mergify[bot]
+* Fix race condition with tf buffer (`#654 <https://github.com/ros-controls/control_toolbox/issues/654>`_)
+* Fix testcase for invalid value at node initialization (`#615 <https://github.com/ros-controls/control_toolbox/issues/615>`_)
+* Define _USE_MATH_DEFINES for each target that links control_toolbox on WIN32 (`#616 <https://github.com/ros-controls/control_toolbox/issues/616>`_)
+* Bump C++ version to C++20 (`#599 <https://github.com/ros-controls/control_toolbox/issues/599>`_)
+* Contributors: Christoph Fröhlich, Silvio Traversaro
 
-5.8.2 (2025-10-16)
+6.3.0 (2026-04-17)
 ------------------
-* Add test for trc if i-gain is zero (`#526 <https://github.com/ros-controls/control_toolbox/issues/526>`_) (`#529 <https://github.com/ros-controls/control_toolbox/issues/529>`_)
-* Fix calculation of tracking time constant (`#511 <https://github.com/ros-controls/control_toolbox/issues/511>`_) (`#525 <https://github.com/ros-controls/control_toolbox/issues/525>`_)
+* RateLimiter: Don't update parameters before input checks `#437 <https://github.com/ros-controls/control_toolbox/issues/437>`_ (`#554 <https://github.com/ros-controls/control_toolbox/issues/554>`_)
+* Contributors: JiaHui Huang
+
+6.2.0 (2026-04-02)
+------------------
+* Add string() methods to get the printable information (`#547 <https://github.com/ros-controls/control_toolbox/issues/547>`_)
+* Use tl_expected from libexpected-dev instead (`#572 <https://github.com/ros-controls/control_toolbox/issues/572>`_)
+* Fix BSD license text (`#563 <https://github.com/ros-controls/control_toolbox/issues/563>`_)
+* Contributors: Christoph Fröhlich, Sai Kishor Kothakota
+
+6.1.0 (2025-12-01)
+------------------
+* Exponantial filter refactoring (`#493 <https://github.com/ros-controls/control_toolbox/issues/493>`_)
+* Replace deprecated rclcpp::spin_some() (`#541 <https://github.com/ros-controls/control_toolbox/issues/541>`_)
+* No need for the specialization of update() (`#509 <https://github.com/ros-controls/control_toolbox/issues/509>`_)
+* Contributors: Abdullah, Christoph Fröhlich, silanus
+
+6.0.0 (2025-10-16)
+------------------
+
+5.9.0 (2025-10-16)
+------------------
+* Add test for trc if i-gain is zero (`#526 <https://github.com/ros-controls/control_toolbox/issues/526>`_)
+* Fix calculation of tracking time constant (`#511 <https://github.com/ros-controls/control_toolbox/issues/511>`_)
+* Remove duplicate storage of limits (`#512 <https://github.com/ros-controls/control_toolbox/issues/512>`_)
 * Improve PID parameter validation (`#510 <https://github.com/ros-controls/control_toolbox/issues/510>`_)
 * [PidROS] Change args to const reference (`#513 <https://github.com/ros-controls/control_toolbox/issues/513>`_)
 * Fix -Wunused-result (`#506 <https://github.com/ros-controls/control_toolbox/issues/506>`_)
-* Contributors: Christoph Fröhlich, Sai Kishor Kothakota, mergify[bot]
+* Contributors: Christoph Fröhlich, Sai Kishor Kothakota, bijoua29
 
 5.8.1 (2025-10-05)
 ------------------
