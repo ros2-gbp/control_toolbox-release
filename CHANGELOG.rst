@@ -2,6 +2,11 @@
 Changelog for package control_toolbox
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+5.11.1 (2026-11-25)
+-------------------
+* Initialize the wrench filter state with NaN explicitly (`#693 <https://github.com/ros-controls/control_toolbox/issues/693>`_) (`#695 <https://github.com/ros-controls/control_toolbox/issues/695>`_)
+* Contributors: mergify[bot]
+
 5.11.0 (2026-11-01)
 -------------------
 * Add configure() overload to set the initial LPF state (`#657 <https://github.com/ros-controls/control_toolbox/issues/657>`_) (`#662 <https://github.com/ros-controls/control_toolbox/issues/662>`_)
